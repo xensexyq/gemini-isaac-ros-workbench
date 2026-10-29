@@ -11,6 +11,9 @@ for f in scripts/*.sh docker/camera-entrypoint.sh; do bash -n "$f"; done
 
 测试覆盖依赖完整性、中断恢复、已修改源码保留和归档路径边界，不依赖 ROS、Docker、GPU 或相机，也不能替代运行验证。
 
+
+实时查看器检查还覆盖增量网格替换/删除、非法数据原子拒绝、ESDF 坐标和未知区域、只读 HTTP 与停止进程身份。图像编码测试需要容器中的 NumPy/OpenCV，宿主缺少时会明确跳过；在已有待命容器内执行 `./scripts/live.sh exec python3 -m unittest discover -s /workspaces/isaac_ros-dev/tests -p test_live_images.py -v`。
+
 ## 2. 容器检查
 
 ```bash

@@ -3,14 +3,14 @@
   "project": {
     "name": "Gemini Isaac ROS Workbench",
     "root": ".",
-    "branch": "codex/initial-publication",
-    "head": "8d65614948337dd225eb2f84c05d8a87991a0e05",
+    "branch": "codex/gemini335l-hardware-validation",
+    "head": "a14b8c013423b588c13fdfbc74a139cf2b32dfeb",
     "dirty": true,
-    "inspectedAt": "2026-10-29T13:23:30+08:00",
-    "summary": "从固定输入、Docker 镜像到独立数据回放和 Gemini 双目视觉 / 深度建图的实际配置。",
+    "inspectedAt": "2026-10-29T15:26:52.446371+08:00",
+    "summary": "固定输入、独立官方录包、Gemini 双目定位/深度建图，以及容器到本机浏览器的实时可视化。",
     "scopeNotes": [
-      "源码证据对应记录的核心提交；地图及双语文档在该提交后的工作区生成，dirty 表示这些文档尚未提交。",
-      "confirmed 表示源码可确认该配置或调用，不表示真实相机或性能已验证。",
+      "本次检查包含未提交的实时查看器和双语复现文档；head 是修改前基线，dirty 明确区分工作区。",
+      "confirmed 表示源码可确认配置、调用或消息处理，不代替硬件精度与长期稳定性验收。",
       "Orbbec 固定提交：296156521b60bdf813cb94c46cbb55562bbdc453；Isaac ROS 4.6 / Jazzy。"
     ]
   },
@@ -81,37 +81,37 @@
     {
       "id": "live",
       "path": "scripts/live.sh",
-      "line": 27,
+      "line": 28,
       "symbol": "live.sh dispatch",
-      "note": "区分待命、前台模式、同容器终端和停止操作。"
+      "note": "命令分发与实时可视化入口。"
     },
     {
       "id": "idle",
       "path": "scripts/live.sh",
-      "line": 37,
+      "line": 39,
       "symbol": "start / docker run",
-      "note": "待命进程为 sleep infinity；映射 USB 总线及本项目，关闭网络和特权。"
+      "note": "待命容器映射 USB，禁用网络，根只读，统一加载容器 Fast DDS 配置。"
     },
     {
       "id": "owner",
       "path": "scripts/live.sh",
-      "line": 16,
+      "line": 17,
       "symbol": "owned / running",
-      "note": "用本任务标签识别容器，拒绝停止同名外部容器。"
+      "note": "容器标签检查。"
     },
     {
       "id": "exec",
       "path": "scripts/live.sh",
-      "line": 83,
+      "line": 91,
       "symbol": "camera|vslam|mapping",
-      "note": "非阻塞锁拒绝重复管线；docker exec 前台运行 ROS launch。"
+      "note": "锁住单一相机管线；只有非空序列号才加入 ROS launch 参数。"
     },
     {
       "id": "stop",
       "path": "scripts/live.sh",
       "line": 51,
       "symbol": "stop",
-      "note": "显式停止后自动移除容器，不删除镜像和输出文件。"
+      "note": "自动移除容器由 Docker 处理，避免重复删除竞态。"
     },
     {
       "id": "camera",
@@ -196,6 +196,90 @@
       "line": 1,
       "symbol": ".gitignore",
       "note": "原始数据、报告、缓存及下载的第三方源码不纳入版本控制。"
+    },
+    {
+      "id": "dds",
+      "path": "config/fastdds.xml",
+      "line": 9,
+      "symbol": "segment_size / maxMessageSize",
+      "note": "64 MiB 共享内存段，16 MiB 单消息上限；仅容器运行时配置。"
+    },
+    {
+      "id": "view-entry",
+      "path": "scripts/live.sh",
+      "line": 86,
+      "symbol": "visualize",
+      "note": "宿主 Python 实时入口；要求本项目待命容器已运行。"
+    },
+    {
+      "id": "view-server",
+      "path": "scripts/live_view.py",
+      "line": 54,
+      "symbol": "Latest / handler_for",
+      "note": "只缓存最新状态、网格和图层；HTTP 校验 Host 并仅监听回环。"
+    },
+    {
+      "id": "view-worker",
+      "path": "scripts/live_view.py",
+      "line": 168,
+      "symbol": "main / docker exec",
+      "note": "通过管道启动容器内 flock + ROS 桥接，不开放容器网络。"
+    },
+    {
+      "id": "view-stop",
+      "path": "scripts/live_view.py",
+      "line": 21,
+      "symbol": "process_matches / stop_active",
+      "note": "校验 PID、启动时间和脚本路径，SIGINT 停止自己的查看器与子管线。"
+    },
+    {
+      "id": "bridge",
+      "path": "scripts/live_view_bridge.py",
+      "line": 17,
+      "symbol": "mapping_command / main",
+      "note": "桥接创建 mapping 子进程；默认单设备省略空序列号。"
+    },
+    {
+      "id": "subscriptions",
+      "path": "scripts/live_view_bridge.py",
+      "line": 130,
+      "symbol": "main / subscriptions",
+      "note": "订阅 Mesh、里程计、状态、ESDF 和 RGB/深度。"
+    },
+    {
+      "id": "snapshot",
+      "path": "scripts/live_view_bridge.py",
+      "line": 151,
+      "symbol": "emit",
+      "note": "约半秒发送状态；网格变化时发送完整显示快照，轨迹最多 6000 点。"
+    },
+    {
+      "id": "mesh-cache",
+      "path": "scripts/live_mesh.py",
+      "line": 8,
+      "symbol": "MeshState.apply / snapshot",
+      "note": "按块替换、删除、清空；原子验证索引与有限坐标，最多 50 万顶点。"
+    },
+    {
+      "id": "live-export",
+      "path": "scripts/live_view_bridge.py",
+      "line": 194,
+      "symbol": "finally / save_ply",
+      "note": "停止 ROS 子进程前有界尝试 PLY 导出，记录成功与错误。"
+    },
+    {
+      "id": "browser",
+      "path": "viewer/live.html",
+      "line": 203,
+      "symbol": "poll / draw / refreshStatus",
+      "note": "大幅三维视图、ESDF 图层和双图像窗，过期/断开明确标记。"
+    },
+    {
+      "id": "layers",
+      "path": "scripts/live_layers.py",
+      "line": 12,
+      "symbol": "slice_snapshot / image_snapshot",
+      "note": "真实 ESDF 观测单元、有限坐标与预算；RGB/深度缩略图保留时间戳，固定深度显示范围。"
     }
   ],
   "nodes": [
@@ -203,14 +287,15 @@
       "id": "entry",
       "label": "命令入口",
       "kind": "entry",
-      "responsibility": "构建、回放检查、待命容器与前台实机模式。",
+      "responsibility": "构建、回放检查、待命容器与前台实机模式。实时可视化入口自动启动 mapping。",
       "x": 30,
       "y": 40,
       "confidence": "confirmed",
       "evidence": [
         "build",
         "live",
-        "replay"
+        "replay",
+        "view-entry"
       ]
     },
     {
@@ -279,7 +364,8 @@
       "evidence": [
         "idle",
         "exec",
-        "stop"
+        "stop",
+        "dds"
       ]
     },
     {
@@ -314,7 +400,7 @@
       "id": "device",
       "label": "Gemini / GPU",
       "kind": "external",
-      "responsibility": "配置面向 Gemini 335L/336L 和 NVIDIA GPU；真实相机兼容性待连接验证。",
+      "responsibility": "Gemini/GPU 为容器设备输入；335L 是参考设备，其他型号、固件及精度须实机确认。",
       "x": 920,
       "y": 470,
       "confidence": "confirmed",
@@ -362,6 +448,50 @@
       "evidence": [
         "mapping",
         "nvblox-bag"
+      ],
+      "parent": "ros"
+    },
+    {
+      "id": "relay",
+      "label": "宿主实时服务",
+      "kind": "worker",
+      "responsibility": "通过 docker exec 管道接收快照，127.0.0.1 提供只读接口；宿主不需要 ROS。",
+      "x": 30,
+      "y": 700,
+      "confidence": "confirmed",
+      "evidence": [
+        "view-server",
+        "view-worker",
+        "view-stop"
+      ]
+    },
+    {
+      "id": "browser",
+      "label": "实时三维页面",
+      "kind": "external",
+      "responsibility": "WebGL 表面、彩虹 ESDF、轨迹与双图像窗；独立图层开关和过期提示。",
+      "x": 30,
+      "y": 920,
+      "confidence": "confirmed",
+      "evidence": [
+        "browser"
+      ]
+    },
+    {
+      "id": "bridge",
+      "label": "ROS 网格桥接",
+      "kind": "detail",
+      "responsibility": "合并网格、位姿，采样真实 ESDF 与 RGB/深度，约半秒经管道发送有界显示快照。",
+      "x": 920,
+      "y": 920,
+      "confidence": "confirmed",
+      "evidence": [
+        "bridge",
+        "subscriptions",
+        "snapshot",
+        "mesh-cache",
+        "live-export",
+        "layers"
       ],
       "parent": "ros"
     }
@@ -566,6 +696,133 @@
         "gpu",
         "idle"
       ]
+    },
+    {
+      "id": "view-start",
+      "from": "entry",
+      "to": "relay",
+      "kind": "sync",
+      "label": "visualize 启动本机服务",
+      "confidence": "confirmed",
+      "evidence": [
+        "view-entry"
+      ]
+    },
+    {
+      "id": "worker-start",
+      "from": "relay",
+      "to": "bridge",
+      "kind": "async",
+      "label": "docker exec + 管线锁",
+      "confidence": "confirmed",
+      "evidence": [
+        "view-worker"
+      ]
+    },
+    {
+      "id": "view-mapping",
+      "from": "bridge",
+      "to": "ros",
+      "kind": "async",
+      "label": "创建 mapping 子进程组",
+      "confidence": "confirmed",
+      "evidence": [
+        "bridge"
+      ]
+    },
+    {
+      "id": "mesh-input",
+      "from": "nvblox",
+      "to": "bridge",
+      "kind": "data",
+      "label": "Mesh / ESDF",
+      "confidence": "confirmed",
+      "evidence": [
+        "subscriptions",
+        "mesh-cache",
+        "layers"
+      ]
+    },
+    {
+      "id": "pose-input",
+      "from": "vslam",
+      "to": "bridge",
+      "kind": "data",
+      "label": "里程计 / 跟踪状态",
+      "confidence": "confirmed",
+      "evidence": [
+        "subscriptions"
+      ]
+    },
+    {
+      "id": "pipe",
+      "from": "bridge",
+      "to": "relay",
+      "kind": "data",
+      "label": "NDJSON 快照管道",
+      "confidence": "confirmed",
+      "evidence": [
+        "snapshot",
+        "view-worker"
+      ]
+    },
+    {
+      "id": "http",
+      "from": "relay",
+      "to": "browser",
+      "kind": "data",
+      "label": "回环 HTTP / gzip 快照",
+      "confidence": "confirmed",
+      "evidence": [
+        "view-server",
+        "browser"
+      ]
+    },
+    {
+      "id": "poll",
+      "from": "browser",
+      "to": "relay",
+      "kind": "async",
+      "label": "只读定时 GET",
+      "confidence": "confirmed",
+      "evidence": [
+        "browser"
+      ]
+    },
+    {
+      "id": "view-result",
+      "from": "bridge",
+      "to": "storage",
+      "kind": "data",
+      "label": "摘要 / 正常停止前 PLY 导出",
+      "confidence": "confirmed",
+      "evidence": [
+        "live-export"
+      ]
+    },
+    {
+      "id": "view-signal",
+      "from": "relay",
+      "to": "bridge",
+      "kind": "sync",
+      "label": "SIGINT 后有界等待清理",
+      "confidence": "confirmed",
+      "evidence": [
+        "view-stop",
+        "live-export"
+      ]
+    },
+    {
+      "id": "image-input",
+      "label": "RGB / depth preview",
+      "kind": "data",
+      "confidence": "confirmed",
+      "evidence": [
+        "layers",
+        "subscriptions"
+      ],
+      "from": "driver",
+      "to": "bridge"
     }
   ],
   "objects": [
@@ -695,6 +952,74 @@
         "observe",
         "nvblox-bag",
         "ignore"
+      ]
+    },
+    {
+      "id": "viewer-session",
+      "name": "实时查看会话",
+      "lifecycle": "宿主绑定回环端口后创建容器内桥接，进程身份记录在 runs；Ctrl+C 或 visualize-stop 只向匹配进程发信号，退出清理自己的 ROS 子进程。",
+      "states": [
+        "待相机初始化",
+        "持续更新",
+        "过期或失败提示",
+        "导出尝试与退出"
+      ],
+      "createdBy": [
+        "entry",
+        "relay"
+      ],
+      "readBy": [
+        "browser",
+        "entry"
+      ],
+      "writtenBy": [
+        "relay",
+        "bridge"
+      ],
+      "relations": [
+        "容器仍 network none",
+        "端口冲突在打开相机前失败",
+        "另一程序占用相机不会被自动终止"
+      ],
+      "confidence": "confirmed",
+      "evidence": [
+        "view-server",
+        "view-worker",
+        "view-stop",
+        "bridge"
+      ]
+    },
+    {
+      "id": "mesh-cache",
+      "name": "增量网格与显示快照",
+      "lifecycle": "ROS 回调按 block index 合并内存网格；空块删除、clear 清空，验证失败保留旧状态；约半秒生成最新快照，退出后内存消失，PLY 仅在导出成功时保留。",
+      "states": [
+        "空缓存",
+        "增量替换/删除",
+        "快照发送",
+        "异常保留最后有效值"
+      ],
+      "createdBy": [
+        "bridge"
+      ],
+      "readBy": [
+        "relay",
+        "browser"
+      ],
+      "writtenBy": [
+        "bridge"
+      ],
+      "relations": [
+        "不是不断追加全部历史几何",
+        "50 万顶点预算",
+        "网页颜色按高度，不是 RGB 纹理"
+      ],
+      "confidence": "confirmed",
+      "evidence": [
+        "mesh-cache",
+        "snapshot",
+        "browser",
+        "live-export"
       ]
     }
   ],
@@ -912,7 +1237,7 @@
       "id": "live",
       "title": "03 · 从待命到实机几何建图",
       "trigger": "连接相机后显式运行 start，再运行 camera / vslam / mapping。",
-      "outcome": "配置相机→双目视觉→深度建图；数据与效果待真实相机验证。",
+      "outcome": "相机→双目视觉定位→深度几何地图；输出质量依赖设备、场景和运行验收。",
       "steps": [
         {
           "title": "只创建待命容器",
@@ -1126,7 +1451,7 @@
             "startup.json",
             "退出码"
           ],
-          "result": "软件证据保留；实机仍待验收。",
+          "result": "软件证据保留；该命令不执行实机验收。",
           "branches": [
             "真实 USB 打开、数据时序、精度和实时性能均不由本检查证明。"
           ],
@@ -1138,28 +1463,178 @@
           ]
         }
       ]
+    },
+    {
+      "id": "live-view",
+      "title": "05 · 相机到浏览器的实时建图",
+      "trigger": "先 start，再 visualize；单相机可不指定序列号。",
+      "outcome": "网页更新几何、真实 ESDF、RGB/深度和轨迹；正常停止尝试保存 PLY。",
+      "steps": [
+        {
+          "title": "建立本机会话",
+          "explanation": "宿主检查社区版与容器标签，先绑定回环端口，再启动容器内桥接。",
+          "nodes": [
+            "entry",
+            "relay",
+            "bridge"
+          ],
+          "edges": [
+            "view-start",
+            "worker-start"
+          ],
+          "data": [
+            "会话目录",
+            "进程身份",
+            "独占管线锁"
+          ],
+          "result": "HTTP 与 ROS 桥接会话创建。",
+          "branches": [
+            "端口被占用时不打开相机；已有会话和重复管线会拒绝。"
+          ],
+          "confidence": "confirmed",
+          "evidence": [
+            "view-entry",
+            "view-server",
+            "view-worker",
+            "view-stop"
+          ]
+        },
+        {
+          "title": "启动实时处理链",
+          "explanation": "桥接以 mapping 模式启动 ROS launch；未指定序列号时省略该参数。",
+          "nodes": [
+            "bridge",
+            "ros"
+          ],
+          "edges": [
+            "view-mapping"
+          ],
+          "data": [
+            "左右 IR",
+            "原生深度",
+            "odom TF"
+          ],
+          "result": "相机、VSLAM 和 nvblox 子进程运行。",
+          "branches": [
+            "相机被其他程序占用时不强停对方；启动错误出现在页面与日志。"
+          ],
+          "confidence": "confirmed",
+          "evidence": [
+            "bridge",
+            "camera",
+            "slam",
+            "mapping"
+          ]
+        },
+        {
+          "title": "合并网格与位姿",
+          "explanation": "回调可靠接收 Mesh，按块合并，位姿进入有界轨迹；不是简单追加每一帧。 同时采样真实 ESDF，忽略未知值；图像以保留时间戳的 JPEG 预览传输。",
+          "nodes": [
+            "nvblox",
+            "vslam",
+            "bridge",
+            "driver"
+          ],
+          "edges": [
+            "mesh-input",
+            "pose-input",
+            "image-input"
+          ],
+          "data": [
+            "clear 与 block indices",
+            "三角面",
+            "里程计/状态"
+          ],
+          "result": "内存持有最新有效网格和轨迹。",
+          "branches": [
+            "异常坐标、索引和超预算更新被拒绝，保留旧地图并提示。"
+          ],
+          "confidence": "confirmed",
+          "evidence": [
+            "subscriptions",
+            "mesh-cache",
+            "layers"
+          ]
+        },
+        {
+          "title": "传输与绘制",
+          "explanation": "桥接约半秒发送状态和变化的网格快照，经 stdout 管道到宿主，浏览器定时获取并绘制。",
+          "nodes": [
+            "bridge",
+            "relay",
+            "browser"
+          ],
+          "edges": [
+            "pipe",
+            "http",
+            "poll"
+          ],
+          "data": [
+            "压缩网格",
+            "相机位姿",
+            "数据年龄"
+          ],
+          "result": "页面展示实时状态和三维几何。",
+          "branches": [
+            "无 CDN；容器未开放网络；断开/过期标记最后画面。"
+          ],
+          "confidence": "confirmed",
+          "evidence": [
+            "snapshot",
+            "view-worker",
+            "view-server",
+            "browser"
+          ]
+        },
+        {
+          "title": "导出与清理",
+          "explanation": "停止入口校验进程身份，桥接在结束 ROS 前尝试导出 PLY，随后有界清理。",
+          "nodes": [
+            "relay",
+            "bridge",
+            "storage"
+          ],
+          "edges": [
+            "view-signal",
+            "view-result"
+          ],
+          "data": [
+            "save_ply 结果",
+            "日志与摘要"
+          ],
+          "result": "相机释放，结果保留，待命容器仍可复用。",
+          "branches": [
+            "没有有效网格或节点故障时导出可能失败，需检查 ply_export_success。"
+          ],
+          "confidence": "confirmed",
+          "evidence": [
+            "view-stop",
+            "live-export"
+          ]
+        }
+      ]
     }
   ],
   "uncertainties": [
     {
-      "topic": "相机与 USB 实机行为",
-      "detail": "已配置 USB 映射、驱动和候选 profile；源码不能证明设备实际可打开、配对或热插拔稳定。",
-      "neededEvidence": "连接 335L/336L，记录固件/序列号，检查 USB 3、流 profile、CameraInfo、TF 与时间戳并录包。"
+      "topic": "设备与场景兼容性",
+      "detail": "335L 是文档参考；源码配置不证明 336L、其他固件或 USB 热插拔表现。",
+      "neededEvidence": "按复现指南逐设备检查 profile、标定、同步与持续采样。"
     },
     {
-      "topic": "实时质量与定位精度",
-      "detail": "慢速官方录包及无相机启动不代表实机实时帧率、延迟、漂移或联合误差。",
-      "neededEvidence": "在受控场景测量处理速率、静止抖动、回程误差、跟踪丢失和网格重影。"
+      "topic": "定位与几何精度",
+      "detail": "实时更新、静置出流和有效 PLY 不代表绝对精度、回环一致性或长期稳定性。",
+      "neededEvidence": "受控移动、外部真值、静态/动态场景及长时间测试；用户选择静置时动态验收待执行。"
     },
     {
-      "topic": "重建一致性",
-      "detail": "基础镜像、驱动和数据固定，但 APT 包版本在构建时解析。",
-      "neededEvidence": "如需逐字节可重复构建，需另行冻结全部 APT 包与构建环境。"
+      "topic": "可视化边界",
+      "detail": "快照约 2 Hz，内存预算 50 万顶点、6000 轨迹点；页面不等于全量离线记录。 ESDF 最多 10 万采样单元，RGB 仅预览，灰白表面无纹理。",
+      "neededEvidence": "更大场景检查 CPU、传输延迟、顶点预算与导出内容。"
     },
     {
-      "topic": "上游语义与扩展",
-      "detail": "投射器交替、IMU 融合、彩色建图、GUI 和导航不在已配置的初始链路中。",
-      "neededEvidence": "逐项实现其配置/数据适配并开展对应实机验收，不能直接套用旧 3.0 配置。"
+      "topic": "重建与依赖边界",
+      "detail": "APT 构建时解析；当前不融合颜色/IMU，地图在 odom 中，不在回环后整体变形。",
+      "neededEvidence": "如需逐字节重建或新融合模式，需要冻结 APT、实现适配并对应验收。"
     }
   ],
   "docDifferences": []

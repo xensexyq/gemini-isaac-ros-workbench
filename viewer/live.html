@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gemini · 实时建图</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:system-ui,sans-serif;background:#101922;color:#e4edf5}
+body{display:flex;flex-direction:column}header{padding:14px 20px;border-bottom:1px solid #32414e;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+h1{font-size:20px;margin:0}.brand small{display:block;color:#9dafbf;font-size:11px;letter-spacing:2px;margin-top:4px}.badge{display:inline-block;padding:5px 9px;border-radius:6px;background:#614c26;font-size:13px;color:#ffe2a0}.live{background:#153f35;color:#8cf0ca}.bad{background:#592c31;color:#ffbdc5}
+.stats{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:#adbfce;margin-left:auto}.stats strong{color:#e4edf5;font-weight:500}
+.tools{display:flex;gap:7px;flex-wrap:wrap;padding:10px 16px;background:#17232e;border-bottom:1px solid #32414e}button{background:#243746;border:1px solid #526a7c;color:#e7edf5;padding:7px 10px;border-radius:6px;cursor:pointer}button:hover{background:#365367}button[aria-pressed=true]{border-color:#67d8bc;color:#9bf4db}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 300px;flex:1;min-height:0}.view{position:relative;min-height:300px;overflow:hidden}canvas{display:block;width:100%;height:100%;touch-action:none}
+#notice{position:absolute;left:18px;top:18px;right:18px;font-size:14px;color:#6b471b;pointer-events:none}.map-label{position:absolute;bottom:16px;left:16px;padding:10px 12px;background:#f7faf9e8;color:#33424b;border:1px solid #bbc6c7;border-radius:8px;font-size:12px;pointer-events:none}.legend{height:7px;border-radius:4px;width:210px;margin:7px 0;background:linear-gradient(to right,#ff2929,#ff0,#0f0,#0ff,#00f,#f0f)}.legend-label{display:flex;justify-content:space-between;font-size:11px}
+aside{background:#17232e;border-left:1px solid #32414e;padding:12px;overflow:auto;display:flex;flex-direction:column;gap:12px}.feed{border:1px solid #3d4e5c;border-radius:9px;overflow:hidden;background:#0c141c}.feed h2{font-size:13px;font-weight:500;margin:0;padding:10px 12px;background:#243340;display:flex;justify-content:space-between}.feed h2 span{font-size:11px;color:#9fb2c1}.image-wrap{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;position:relative;background:#060a0e}.image-wrap img{width:100%;height:100%;object-fit:contain}.image-wrap img:not([src]){visibility:hidden}.image-empty{position:absolute;font-size:12px;color:#8fa3b3}.feed p{margin:0;padding:9px 12px;font-size:11px;color:#a9bac7;line-height:1.6}.feed.stale{border-color:#b58252}.feed.stale img{opacity:.45}.side-note{font-size:12px;line-height:1.8;color:#b0c2d0;margin:0}#detail{font-size:12px;color:#aabcca;margin:0;line-height:1.6;overflow-wrap:anywhere}footer{padding:8px 16px;border-top:1px solid #32414e;color:#aabcca;font-size:11px;line-height:1.6}
+@media(max-width:850px){.workspace{grid-template-columns:minmax(0,1fr) 210px}header{gap:9px}.stats{margin-left:0;gap:12px}.map-label{max-width:calc(100% - 32px)}.legend{width:160px}}
+@media(max-width:560px){body{height:auto;min-height:100%}.workspace{display:flex;flex-direction:column}.view{height:55vh;min-height:320px}aside{display:grid;grid-template-columns:1fr 1fr;border-left:0;border-top:1px solid #32414e}.side-note,#detail{grid-column:1/-1}.stats{font-size:11px}.tools button{font-size:11px;padding:6px 8px}.feed h2{padding:8px;font-size:12px}.feed h2 span{font-size:10px}}
+</style>
+<header>
+ <div class="brand"><h1>Gemini · 实时建图</h1><small>ISAAC ROS / NVBLOX</small></div>
+ <span id="status" class="badge" role="status">等待实时数据</span>
+ <div class="stats"><div>定位 <strong id="rate">—</strong></div><div>年龄 <strong id="age">—</strong></div><div>表面 <strong id="geometry">—</strong></div><div>更新 <strong id="sequence">—</strong></div></div>
+</header>
+<div class="tools">
+ <button id="fit">适配地图</button><button id="top">俯视</button><button id="front">正视</button>
+ <button id="follow">跟随相机：关</button><button id="mode">点云显示</button>
+ <button id="surface" aria-pressed="true">表面：开</button><button id="esdf" aria-pressed="true">ESDF：开</button><button id="grid" aria-pressed="true">参考网格：开</button><button id="material">高度着色</button>
+</div>
+<div class="workspace">
+ <div class="view"><canvas id="canvas" aria-label="真实三维表面与 ESDF 距离场"></canvas><div id="notice">等待相机与地图…</div>
+  <div class="map-label">ESDF · 到最近障碍表面的二维距离<div class="legend"></div><div class="legend-label"><span>≤ 0 m / 障碍</span><span>≥ 2 m</span></div><div id="slice-info" style="margin-top:7px">等待距离切片 · 未知区域不显示</div></div>
+ </div>
+ <aside>
+  <section class="feed" id="color-feed"><h2>Color Image <span id="color-age">等待</span></h2><div class="image-wrap"><span class="image-empty" id="color-empty">等待彩色图像</span><img id="color-image" alt="相机实时彩色画面"></div><p>RGB 预览 · 不作为表面纹理</p></section>
+  <section class="feed" id="depth-feed"><h2>Depth Image <span id="depth-age">等待</span></h2><div class="image-wrap"><span class="image-empty" id="depth-empty">等待深度图像</span><img id="depth-image" alt="相机实时原生深度画面"></div><p>0.2–5 m · 近亮远暗 · 黑色为无效深度</p></section>
+  <p class="side-note">灰白表面：深度融合网格<br>彩虹平面：真实 ESDF 切片<br>黄色：轨迹 · 青色：相机<br>参考网格为 odom z=0，并非地面检测</p>
+  <p id="detail">等待相机与定位初始化。</p>
+ </aside>
+</div>
+<footer>拖动旋转 · 滚轮缩放 · Shift + 拖动平移 · 三维快照及图像预览约 2 Hz，定位频率单独显示。odom / 米。本机数据，无上传。完整房间需实际移动扫描。</footer>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const canvas = $('canvas');
+const gl = canvas.getContext('webgl2', {antialias:true});
+if (!gl) {
+  $('status').textContent = '浏览器未提供 WebGL 2';
+  $('status').className = 'badge bad';
+  throw new Error('WebGL2 unavailable');
+}
+const vertexSource = `#version 300 es
+in vec3 position; in vec3 normal; in float distanceValue;
+uniform vec3 center; uniform float radius, yaw, pitch, zoom, aspect, zmin, zmax;
+uniform vec4 flatColor; uniform int layerMode; uniform float cellSize; out vec3 color;
+void main() {
+ vec3 p=(position-center)/radius;
+ float x=cos(yaw)*p.x+sin(yaw)*p.y;
+ float f=-sin(yaw)*p.x+cos(yaw)*p.y;
+ float y=cos(pitch)*p.z-sin(pitch)*f;
+ float depth=4.+cos(pitch)*f+sin(pitch)*p.z;
+ gl_Position=vec4(x*2.*zoom/aspect,y*2.*zoom,20.1/19.9*depth-4./19.9,depth);
+ gl_PointSize=layerMode==2?clamp(cellSize*zoom*700./(radius*depth),2.,18.):2.;
+ float t=clamp((position.z-zmin)/max(.001,zmax-zmin),0.,1.);
+ vec3 heightColor=mix(vec3(.13,.62,.88),vec3(.98,.73,.33),t);
+ float shade=.38+.62*abs(dot(normalize(normal),normalize(vec3(.4,-.5,1.))));
+ vec3 surfaceColor=layerMode==1?heightColor:vec3(.78,.80,.79);
+ float tDistance=clamp(distanceValue/2.,0.,1.);
+ vec3 rainbow=clamp(abs(mod(tDistance*5.+vec3(0.,4.,2.),6.)-3.)-1.,0.,1.);
+ color=layerMode==2?rainbow:(flatColor.a>0.?flatColor.rgb:surfaceColor*shade);
+}`;
+const fragmentSource = `#version 300 es
+precision highp float; in vec3 color; out vec4 frag;
+void main(){frag=vec4(color,1.);}`;
+function compile(type, source) {
+  const shader=gl.createShader(type);
+  gl.shaderSource(shader,source); gl.compileShader(shader);
+  if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+  return shader;
+}
+const program=gl.createProgram();
+gl.attachShader(program,compile(gl.VERTEX_SHADER,vertexSource));
+gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragmentSource));
+gl.linkProgram(program);
+if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+gl.useProgram(program);
+const uniform=name=>gl.getUniformLocation(program,name);
+const positions=gl.createBuffer(), normals=gl.createBuffer(), indices=gl.createBuffer();
+const linePositions=gl.createBuffer(), lineNormals=gl.createBuffer(), sliceBuffer=gl.createBuffer();
+let slice=null, layers={}, showEsdf=true, showSurface=true, showGrid=true, heightColor=false;
+let geometry=null, metadata=null, path=[], pose=null, meshRevision=-1;
+let center=[0,0,0], radius=2, yaw=.6, pitch=.65, zoom=1.3, points=false, follow=false;
+let fitted=false, drag=null, lastPoll=0, connected=false;
+gl.enable(gl.DEPTH_TEST); gl.clearColor(.82,.85,.85,1);
+function attribute(name, buffer) {
+  gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+  const location=gl.getAttribLocation(program,name);
+  gl.enableVertexAttribArray(location); gl.vertexAttribPointer(location,3,gl.FLOAT,false,0,0);
+}
+function decode(encoded, Type) {
+  const binary=atob(encoded), bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+  return new Type(bytes.buffer);
+}
+function upload(name, buffer, values, type=gl.ARRAY_BUFFER) {
+  gl.bindBuffer(type,buffer); gl.bufferData(type,values,gl.DYNAMIC_DRAW);
+}
+function fit() {
+  if(!geometry || !geometry.vertices) return;
+  center=geometry.low.map((x,i)=>(x+geometry.high[i])/2);
+  radius=Math.max(1, ...geometry.high.map((x,i)=>(x-geometry.low[i])/2));
+  zoom=1.3; fitted=true; draw();
+}
+function setGeometry(data) {
+  if(!data.vertices) {geometry=data; return;}
+  const p=decode(data.positions,Float32Array),n=decode(data.normals,Float32Array),t=decode(data.indices,Uint32Array);
+  if(p.length!==data.vertices*3 || n.length!==p.length || t.length!==data.triangles*3) throw new Error('地图数据长度不一致');
+  geometry=data;
+  upload('position',positions,p); upload('normal',normals,n); upload('index',indices,t,gl.ELEMENT_ARRAY_BUFFER);
+  if(!fitted) fit();
+}
+function lines(values,color,mode=gl.LINES) {
+  if(!values.length) return;
+  const p=new Float32Array(values.flat()),n=new Float32Array(p.length);
+  for(let i=2;i<n.length;i+=3) n[i]=1;
+  upload('position',linePositions,p); upload('normal',lineNormals,n);
+  attribute('position',linePositions); attribute('normal',lineNormals);
+  gl.uniform1i(uniform('layerMode'),0);
+  gl.uniform4fv(uniform('flatColor'),[...color,1]);
+  gl.drawArrays(mode,0,values.length);
+}
+function rotate(v,q) {
+  const [x,y,z,w]=q;
+  const t=[2*(y*v[2]-z*v[1]),2*(z*v[0]-x*v[2]),2*(x*v[1]-y*v[0])];
+  return [v[0]+w*t[0]+y*t[2]-z*t[1],v[1]+w*t[1]+z*t[0]-x*t[2],v[2]+w*t[2]+x*t[1]-y*t[0]];
+}
+function cameraLines() {
+  if(!pose) return [];
+  const origin=pose.position;
+  const corners=[[.2,.1,.075],[.2,-.1,.075],[.2,-.1,-.075],[.2,.1,-.075]].map(v=>rotate(v,pose.quaternion).map((x,i)=>x+origin[i]));
+  const result=[];
+  for(let i=0;i<4;i++) result.push(origin,corners[i],corners[i],corners[(i+1)%4]);
+  return result;
+}
+function draw() {
+  const scale=Math.min(devicePixelRatio,2),w=Math.round(canvas.clientWidth*scale),h=Math.round(canvas.clientHeight*scale);
+  if(canvas.width!==w || canvas.height!==h){canvas.width=w; canvas.height=h;}
+  gl.viewport(0,0,w,h); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  const focus=follow&&pose?pose.position:center;
+  gl.uniform3fv(uniform('center'),focus); gl.uniform1f(uniform('radius'),radius);
+  for(const [key,value] of Object.entries({yaw,pitch,zoom,aspect:w/h,zmin:geometry?.low[2]??-1,zmax:geometry?.high[2]??1})) gl.uniform1f(uniform(key),value);
+  gl.uniform1i(uniform('layerMode'),heightColor?1:0);
+  if(showSurface && geometry?.vertices) {
+    attribute('position',positions); attribute('normal',normals);
+    gl.uniform4fv(uniform('flatColor'),[0,0,0,0]);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);
+    if(points) gl.drawArrays(gl.POINTS,0,geometry.vertices);
+    else gl.drawElements(gl.TRIANGLES,geometry.triangles*3,gl.UNSIGNED_INT,0);
+  }
+  if(showGrid){
+    const grid=[]; const cx=Math.floor(focus[0]),cy=Math.floor(focus[1]);
+    for(let i=-10;i<=10;i++){grid.push([cx+i,cy-10,0],[cx+i,cy+10,0],[cx-10,cy+i,0],[cx+10,cy+i,0]);}
+    lines(grid,[.66,.70,.71]);
+  }
+  if(showEsdf && slice?.count){
+    gl.bindBuffer(gl.ARRAY_BUFFER,sliceBuffer);
+    const loc=gl.getAttribLocation(program,'position'),d=gl.getAttribLocation(program,'distanceValue');
+    gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,16,0);
+    gl.enableVertexAttribArray(d);gl.vertexAttribPointer(d,1,gl.FLOAT,false,16,12);
+    const n=gl.getAttribLocation(program,'normal');gl.disableVertexAttribArray(n);gl.vertexAttrib3f(n,0,0,1);
+    gl.uniform1i(uniform('layerMode'),2);gl.uniform1f(uniform('cellSize'),slice.resolution);
+    gl.drawArrays(gl.POINTS,0,slice.count);gl.disableVertexAttribArray(d);
+  }
+  lines(path,[.95,.63,.03],gl.LINE_STRIP);
+  lines(cameraLines(),[.15,1,1]);
+  lines([[0,0,0],[.4,0,0]],[1,.35,.35]);
+  lines([[0,0,0],[0,.4,0]],[.3,1,.45]);
+  lines([[0,0,0],[0,0,.4]],[.4,.55,1]);
+}
+function refreshStatus() {
+  if(!metadata) return;
+  const transit=performance.now()-lastPoll;
+  const transportAge=metadata.wall_time?Math.max(0,Date.now()-metadata.wall_time*1000):(metadata.relay_age_ms??0)+transit;
+  const age=(metadata.odom_age_ms??0)+transportAge;
+  const live=connected&&metadata.running&&!metadata.error&&metadata.odom_messages>0&&age<2000&&metadata.vo_state!==2;
+  const waiting=connected&&metadata.running&&!metadata.error&&!metadata.odom_messages;
+  $('status').textContent=!connected?'连接中断，画面为最后一帧':metadata.error?'采集异常':!metadata.running?'采集已停止':metadata.vo_state===2?'定位跟踪丢失':waiting?'等待定位初始化':age>=2000?'实时数据已过期':'实时更新中';
+  $('status').className='badge'+(live?' live':waiting?'':' bad');
+  $('rate').textContent=(live?'':'末值 ')+(metadata.odom_hz??0).toFixed(1)+' Hz';
+  $('age').textContent=metadata.odom_age_ms==null?'等待':Math.round(age)+' ms';
+  $('geometry').textContent=(geometry?.vertices??0).toLocaleString()+' 顶点';
+  $('sequence').textContent=(metadata.sequence??0)+' / 网格 '+(geometry?.revision??0);
+  $('detail').textContent=metadata.error??(pose?'相机位置：'+pose.position.map(x=>x.toFixed(3)).join(', ')+' m · 位姿到达年龄 '+Math.round(metadata.pose_stamp_age_ms??0)+' ms':'等待相机与定位初始化。');
+  for(const kind of ['color','depth']){
+    const imageAge=layers[kind]?.stamp?Math.max(0,Date.now()-layers[kind].stamp*1000):null;
+    const stale=!connected||!metadata.running||!!metadata.layer_errors?.[kind]||imageAge==null||imageAge>2500;
+    $(kind+'-feed').classList.toggle('stale',stale);
+    $(kind+'-age').textContent=metadata.layer_errors?.[kind]??(imageAge==null?'等待':(stale?'过期 ':'')+Math.round(imageAge)+' ms');
+    if(metadata.layer_errors?.[kind]) $(kind+'-empty').textContent=metadata.layer_errors[kind];
+  }
+  const sliceAge=slice?.stamp?Date.now()-slice.stamp*1000:null;
+  $('slice-info').textContent=metadata.layer_errors?.esdf??(slice?`${slice.count.toLocaleString()} 个观测单元 · z=${slice.origin[2].toFixed(2)} m`+(!connected||!metadata.running||sliceAge>2500?' · 已过期':''):'等待距离切片 · 未知区域不显示');
+  $('notice').textContent=!live&&!waiting?'实时采集不可用，保留最后地图':!geometry?.vertices?'等待深度融合生成地图…':'';
+}
+async function poll() {
+  try {
+    const response=await fetch('/api/state',{cache:'no-store',signal:AbortSignal.timeout(2500)});
+    if(!response.ok) throw new Error('状态接口不可用');
+    const state=await response.json();
+    if(state.available_mesh_revision!==meshRevision) {
+      const meshResponse=await fetch('/api/mesh',{cache:'no-store',signal:AbortSignal.timeout(5000)});
+      if(!meshResponse.ok) throw new Error('地图接口不可用');
+      const data=await meshResponse.json();
+      if(data.revision!==undefined){setGeometry(data); meshRevision=data.revision;}
+    }
+    const layerResponse=await fetch('/api/layers',{cache:'no-store',signal:AbortSignal.timeout(5000)});
+    if(!layerResponse.ok) throw new Error('图层接口不可用');
+    const incoming=await layerResponse.json();
+    for(const kind of ['color','depth']) if(incoming[kind]?.stamp!==layers[kind]?.stamp && incoming[kind]?.jpeg){
+      $(kind+'-image').src='data:image/jpeg;base64,'+incoming[kind].jpeg;
+      $(kind+'-empty').style.display='none';
+    }
+    if(incoming.esdf && incoming.esdf.stamp!==slice?.stamp){
+      const values=decode(incoming.esdf.xyzd,Float32Array);
+      if(values.length!==incoming.esdf.count*4)throw new Error('ESDF 长度不一致');
+      slice=incoming.esdf;upload('slice',sliceBuffer,values);
+    }
+    layers=incoming;
+    metadata=state; path=state.path??[]; pose=state.pose;
+    lastPoll=performance.now(); connected=true;
+    draw();
+  } catch(error) {
+    connected=false;
+    $('detail').textContent=error.message;
+    if(!metadata){$('status').textContent='等待本机实时服务'; $('status').className='badge bad';}
+  } finally {
+    refreshStatus(); setTimeout(poll,350);
+  }
+}
+$('fit').onclick=fit;
+for(const [id,label] of [['esdf','ESDF'],['surface','表面'],['grid','参考网格']]) $(id).onclick=e=>{
+  const enabled=e.target.getAttribute('aria-pressed')!=='true';
+  e.target.setAttribute('aria-pressed',String(enabled));e.target.textContent=label+'：'+(enabled?'开':'关');
+  if(id==='esdf')showEsdf=enabled;if(id==='surface')showSurface=enabled;if(id==='grid')showGrid=enabled;draw();
+};
+$('material').onclick=e=>{heightColor=!heightColor;e.target.textContent=heightColor?'灰白表面':'高度着色';draw();};
+$('top').onclick=()=>{yaw=0;pitch=1.56;draw();};
+$('front').onclick=()=>{yaw=0;pitch=0;draw();};
+$('follow').onclick=e=>{follow=!follow;e.target.textContent='跟随相机：'+(follow?'开':'关');draw();};
+$('mode').onclick=e=>{points=!points;e.target.textContent=points?'网格显示':'点云显示';draw();};
+canvas.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;if(e.shiftKey){const dx=(e.clientX-drag[0])*radius*.004/zoom,dy=(e.clientY-drag[1])*radius*.004/zoom;center[0]-=dx*Math.cos(yaw)+dy*Math.sin(yaw);center[1]-=dx*Math.sin(yaw)-dy*Math.cos(yaw);follow=false; $('follow').textContent='跟随相机：关';drag=[e.clientX,e.clientY];draw();return;}yaw-=(e.clientX-drag[0])*.007;pitch=Math.max(-1.56,Math.min(1.56,pitch+(e.clientY-drag[1])*.007));drag=[e.clientX,e.clientY];draw();});
+canvas.addEventListener('pointerup',()=>drag=null);
+canvas.addEventListener('pointercancel',()=>drag=null);
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.35,Math.min(7,zoom*Math.exp(-e.deltaY*.001)));draw();},{passive:false});
+new ResizeObserver(draw).observe(canvas);
+setInterval(refreshStatus,250); draw(); poll();
+</script>
+</html>

@@ -11,6 +11,9 @@ for f in scripts/*.sh docker/camera-entrypoint.sh; do bash -n "$f"; done
 
 Tests exercise dependency integrity, partial-transfer recovery, changed-source preservation and archive path boundaries. They do not require ROS, Docker, a GPU or a camera, and do not substitute for runtime validation.
 
+
+Viewer checks also cover incremental mesh replacement/deletion, atomic invalid-data rejection, ESDF coordinates/unknown cells, read-only HTTP and stop-process identity. Image encoding tests need container NumPy/OpenCV and explicitly skip when unavailable on the host. In an existing idle container run `./scripts/live.sh exec python3 -m unittest discover -s /workspaces/isaac_ros-dev/tests -p test_live_images.py -v`.
+
 ## 2. Container checks
 
 ```bash

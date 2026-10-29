@@ -8,6 +8,19 @@
 
 建议把项目放在 ext4 等 Linux 文件系统。镜像存储沿用 Docker/containerd 的既有配置；仅移动项目目录不会迁移镜像层。全新构建并准备两套数据时建议预留约 80 GB 空间。nvblox 压缩包本身约 9.34 GB，还需要解压数据和 Docker 构建缓存空间。
 
+
+### 1.1 参考环境与支持边界
+
+| 项目 | 本机参考配置 |
+| --- | --- |
+| 系统 / GPU | Ubuntu 24.04 x86_64 / RTX 5060 Laptop，8 GB 显存 |
+| 驱动 / 容器 | NVIDIA 595.99.02 / Docker Engine Community 29.7.1 |
+| 算法 / ROS | Isaac ROS 4.6 / ROS 2 Jazzy，容器 CUDA 13.2 |
+| 相机 / 驱动 | Gemini 335L，固件 1.2.81 / OrbbecSDK_ROS2 2.10.6 |
+| 候选设备 | Gemini 336L 使用同系列配置，尚需本机型实测 |
+
+这是可参考的已运行环境，不是所有 GPU、驱动、固件的兼容性列表或最低版本承诺。默认实机容器限制 20 GiB RAM、12 CPU、2 GiB `/dev/shm`；应确认主机资源充足。浏览器实时查看需要 WebGL 2，宿主只使用 Python 标准库，不安装 ROS、网页框架或 X11 组件。
+
 ## 2. 构建镜像
 
 ```bash

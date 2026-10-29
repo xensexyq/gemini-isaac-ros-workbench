@@ -8,6 +8,19 @@ Ubuntu 24.04 x86_64, Python 3.12+, Git and `dpkg-deb` are the host tools. Docker
 
 Keep the checkout on a Linux filesystem such as ext4. Container image storage follows the existing Docker/containerd configuration; moving the checkout alone does not move image layers. Around 80 GB of free storage is recommended for a fresh build plus both datasets. The nvblox archive alone is about 9.34 GB, with additional extracted data and Docker build cache.
 
+
+### 1.1 Reference environment and support boundary
+
+| Item | Local reference |
+| --- | --- |
+| OS / GPU | Ubuntu 24.04 x86_64 / RTX 5060 Laptop, 8 GB VRAM |
+| Driver / container | NVIDIA 595.99.02 / Docker Engine Community 29.7.1 |
+| Algorithms / ROS | Isaac ROS 4.6 / ROS 2 Jazzy, container CUDA 13.2 |
+| Camera / wrapper | Gemini 335L, firmware 1.2.81 / OrbbecSDK_ROS2 2.10.6 |
+| Candidate hardware | Gemini 336L uses the same-family configuration and still needs hardware acceptance |
+
+This is a working reference, not a universal GPU/driver/firmware compatibility list or minimum-version promise. The live container defaults to 20 GiB RAM, 12 CPUs and 2 GiB `/dev/shm` limits; check host resources. Browser visualization needs WebGL 2. Its host relay uses only Python's standard library, without host ROS, a web framework or X11 components.
+
 ## 2. Build images
 
 ```bash

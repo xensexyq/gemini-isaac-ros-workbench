@@ -37,8 +37,16 @@
 
 ## 5. 交互源码地图
 
-克隆后直接打开 [index.html](architecture/index.html)。它是自包含文件，不需要服务、构建或 CDN。中文界面支持缩放/平移、模块展开、源码证据、对象生命周期，以及构建、数据回放、实机建图、禁用相机验证四种流程。
+克隆后直接打开 [index.html](architecture/index.html)。它是自包含文件，不需要服务、构建或 CDN。中文界面支持缩放/平移、模块展开、源码证据、对象生命周期，以及构建、数据回放、实机建图、禁用相机验证及浏览器实时查看五种流程。
 
 [architecture.json](architecture/architecture.json) 是可编辑模型，记录检查快照与准确源码位置。`confirmed` 仅表示源码可确认配置或调用，不表示硬件运行成功。相机访问、同步、精度、实时行为和可变 APT 依赖都保留为可见的不确定项。
 
 地图更新与检查方法见[维护指南](DEVELOPMENT-zh.md)。
+
+## 6. 浏览器实时链路
+
+`live.sh visualize` 在宿主启动 `live_view.py`，检查容器归属和 Docker Community，并先绑定回环端口。随后通过 `docker exec` 管道启动容器内 `live_view_bridge.py`；桥接持有管线锁并创建 mapping 子进程，额外启用 RGB 预览，颜色融合仍关闭。
+
+桥接可靠订阅增量网格，并订阅里程计、状态、ESDF、RGB 和深度。`live_mesh.py` 按块合并网格；`live_layers.py` 保留观测 ESDF 单元和原始图像时间戳，生成有界显示数据。宿主仅缓存最新状态、压缩网格及图层；`viewer/live.html` 从只读 HTTP 接口轮询，WebGL 绘制表面/距离场/轨迹，右侧显示 JPEG 预览。容器网络仍关闭，宿主不安装 ROS。
+
+正常停止先尝试 PLY 导出，再终止本次 ROS 子进程并释放相机。停止入口验证 PID 和进程启动时间，避免误停复用的 PID；已有地图在数据中断时明确标为末帧。更多边界见[相机操作](CAMERA-zh.md#61-参考演示布局与图层含义)。

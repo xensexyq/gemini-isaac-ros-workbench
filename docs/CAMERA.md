@@ -89,3 +89,43 @@ Files appear under the checkout's `runs/` directory. Check free disk space befor
 Initial uses include indoor robot visual localization, local obstacle reconstruction, handheld local scanning and ROS perception-pipeline experiments. A distance field does not automatically produce a feasible path, and a mesh is not a metrology-grade CAD model. With the projector disabled, depth depends on natural texture and lighting; nearby moving people, reflective surfaces and incomplete coverage can leave holes or ghosting. Integration is in `odom`; the map is not globally deformed after a VSLAM loop closure.
 
 Live RViz requires these topics and the corresponding plugins, plus a GUI connection. The current container does not forward the host display server. Export and view PLY first; no host driver changes are needed.
+
+## 6. Live mapping in the browser
+
+From a host terminal in the project:
+
+```bash
+./scripts/live.sh start
+./scripts/live.sh visualize
+# Multiple cameras: ./scripts/live.sh visualize <target-serial>
+```
+
+Open `http://127.0.0.1:8770/`. `visualize` starts the camera, VSLAM, nvblox and the viewer. The container pipeline lock prevents two pipelines from opening the camera concurrently. Wait for camera/map initialization and the live status, then translate and rotate slowly with overlapping views of fixed, textured objects. Avoid fast rotations, blank walls and nearby moving people.
+
+The page shows a changing mesh, yellow trajectory, cyan camera outline, odometry rate, data age and update counters. Drag to orbit, scroll to zoom, fit the map or enable camera following. Surfaces are gray by default, with optional height coloring; neither mode is RGB textured. Visualization snapshots are sent at approximately 2 Hz, separately from the approximately 30 Hz odometry/depth inputs.
+
+Press Ctrl+C in the launching terminal to stop, or use another terminal:
+
+```bash
+./scripts/live.sh visualize-stop
+./scripts/live.sh stop
+```
+
+The first command attempts to export the mesh to that run's `reports/live-mesh.ply` before stopping the viewer and its mapping pipeline. It checks PID/process birth time and retains the idle container. Check `ply_export_success` in `reports/bridge-summary.json`; export is not guaranteed without a valid map or when the node has failed. The second removes the idle container. A stopped/stale/disconnected page clearly labels its last retained frame. If another application/container owns the camera, wait for that capture to finish; this entry does not stop other projects.
+
+The viewer binds only host `127.0.0.1` and receives ROS messages through a `docker exec` pipe. The container retains `--network none`; no X11 mount, `xhost`, host ROS or GUI installation is required. The page uses no CDN or external upload. Logs and summaries remain under `runs/<timestamp>-live-view/`, excluded from Git. Display limits are 6000 trajectory points and 500,000 mesh vertices. Invalid/over-budget updates are reported while retaining the last valid map; this does not establish complete coverage.
+
+### 6.1 Demonstration layout and layer meaning
+
+A large 3D view sits beside stacked image panels, with a responsive layout on narrow screens. Toggle the surface, ESDF and reference grid independently; use top/front views, fit, or Shift + drag to pan.
+
+| Layer | Actual input and display meaning |
+| --- | --- |
+| Gray 3D surface | Incremental nvblox triangle mesh, optionally height-colored; no RGB texture. |
+| Rainbow distance field | Observed cells from `/nvblox_node/static_map_slice`; red means distance ≤0 m, purple ≥2 m. Unknown cells are omitted. This is 2D ESDF distance, not floor color or a guarantee of traversability. |
+| Color Image | `/camera/color/image_raw`, preserving aspect ratio at up to 640 pixels wide. Viewer mode enables RGB for preview only, without color fusion. |
+| Depth Image | `/camera/depth/image_raw`, fixed grayscale range 0.2–5 m, near bright and far dark; invalid depth is black. Native depth and color are not registered. |
+
+The slice uses the message's `origin.z` directly and displays that height. The reference grid is at `odom z=0`; it is not ground detection. Mesh snapshots and both previews update at about 2 Hz and retain capture timestamps. Expired images dim and are labeled; a retained frame is not live capture. ESDF display samples at most 100,000 cells, subsampling larger slices without treating unknown cells as free space.
+
+This reproduces the demonstration's layout and data layers. Full-room coverage, clear texture and robust motion still depend on scanning coverage, valid depth, tracking drift and color fusion. A stationary camera reconstructs only its current view. RGB surface fusion, active/passive emitter interleaving and navigation control are not included.

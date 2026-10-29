@@ -6,11 +6,12 @@ IMAGE=gemini-isaac-ros:4.6-jazzy-camera-v2.10.6
 LABEL=gemini-isaac-ros-workbench-v1
 usage() {
   cat <<'EOF'
-用法：live.sh start|stop|status|shell|doctor
-      live.sh camera|vslam|mapping [相机序列号]
+用法：live.sh start|stop|status|shell|doctor|visualize-stop
+      live.sh camera|vslam|mapping|visualize [相机序列号]
       live.sh exec <容器内命令及参数...>
 start 仅创建待命容器，不启动相机。camera/vslam/mapping 在前台运行，Ctrl+C 停止。
-首次先运行 camera 检查流，再运行 vslam，最后运行 mapping。多台相机必须指定序列号。
+首次先运行 camera 检查流。visualize 自动运行 mapping，并在 http://127.0.0.1:8770/ 实时显示。
+多台相机必须指定序列号。
 EOF
 }
 owned() {
@@ -79,14 +80,24 @@ case "$action" in
     [[ $# -gt 0 ]] || { usage; exit 2; }
     exec docker exec "$NAME" /opt/orbbec-entrypoint.sh "$@"
     ;;
+  visualize-stop)
+    exec python3 "$ROOT/scripts/live_view.py" --stop
+    ;;
+  visualize)
+    require_running
+    [[ $# -le 1 ]] || { usage; exit 2; }
+    exec python3 "$ROOT/scripts/live_view.py" --serial "${1:-}"
+    ;;
   camera|vslam|mapping)
     require_running
     [[ $# -le 1 ]] || { usage; exit 2; }
+    launch_args=("mode:=$action")
+    [[ -z "${1:-}" ]] || launch_args+=("serial_number:=$1")
     # exec 的 ros2 进程保持前台；flock 防止多终端重复占用同一相机。
     exec docker exec -it "$NAME" /opt/orbbec-entrypoint.sh \
       flock --nonblock /tmp/isaac-live-pipeline.lock \
       ros2 launch /workspaces/isaac_ros-dev/scripts/orbbec_live.launch.py \
-      "mode:=$action" "serial_number:=${1:-}"
+      "${launch_args[@]}"
     ;;
   help|-h|--help) usage ;;
   *) usage >&2; exit 2 ;;

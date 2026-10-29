@@ -25,7 +25,7 @@ def _launch(context):
     camera.update(camera_name='camera', serial_number=arg('serial_number'),
                   use_sim_time=use_sim_time,
                   enable_depth=mode in ('camera', 'mapping'),
-                  enable_color=mode == 'camera')
+                  enable_color=mode == 'camera' or arg('preview_images').lower() == 'true')
     actions = []
     if arg('start_camera').lower() == 'true':
         actions.append(ComposableNodeContainer(
@@ -81,7 +81,7 @@ def _launch(context):
             name='nvblox_container', namespace='', package='rclcpp_components',
             executable='component_container_isolated', arguments=['--use_multi_threaded_executor'],
             composable_node_descriptions=[mapping], output='screen'))
-    actions.append(LogInfo(msg=f'模式={mode}；双目视觉定位；建图使用原生深度和 odom TF；实机尚待验证。'))
+    actions.append(LogInfo(msg=f'模式={mode}；双目视觉定位；建图使用原生深度和 odom TF；实时输出请检查话题或查看器。'))
     return actions
 
 
@@ -91,6 +91,8 @@ def generate_launch_description():
         DeclareLaunchArgument('mode', default_value='camera'),
         DeclareLaunchArgument('serial_number', default_value=''),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
+        DeclareLaunchArgument('preview_images', default_value='false',
+                              description='Enable RGB preview without color fusion'),
         DeclareLaunchArgument('camera_config', default_value=str(root / 'config/gemini330.yaml')),
         DeclareLaunchArgument('start_camera', default_value='true',
                               description='false 仅用于无相机检查或独立录包回放'),

@@ -55,5 +55,36 @@ sys.exit(2)
         self.assertFalse(removed)
 
 
+class CameraLaunchDefaultsTests(unittest.TestCase):
+    def test_camera_mode_omits_empty_serial_but_forwards_explicit_selection(self):
+        import json
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            fake = path / 'docker'
+            fake.write_text('''#!/usr/bin/env python3
+import json,sys,os
+from pathlib import Path
+a=sys.argv[1:]
+if a[0]=='inspect':
+    if '--format' in a:
+        print('true' if 'State.Running' in a[a.index('--format')+1] else 'gemini-isaac-ros-workbench-v1')
+    sys.exit(0)
+if a[0]=='exec':
+    Path(os.environ['FAKE_ARGS']).write_text(json.dumps(a))
+    sys.exit(0)
+sys.exit(2)
+''')
+            fake.chmod(0o755)
+            env = dict(os.environ, PATH=str(path) + os.pathsep + os.environ['PATH'], FAKE_ARGS=str(path/'args.json'))
+            for mode in ('camera', 'vslam', 'mapping'):
+                for serial in ([], ['TEST_CAMERA']):
+                    result = subprocess.run(['bash', str(ROOT/'scripts/live.sh'), mode] + serial, env=env, capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    args = json.loads((path/'args.json').read_text())
+                    self.assertNotIn('serial_number:=', args)
+                    if serial:
+                        self.assertIn('serial_number:=TEST_CAMERA', args)
+
+
 if __name__ == '__main__':
     unittest.main()

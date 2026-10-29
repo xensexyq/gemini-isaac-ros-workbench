@@ -37,8 +37,16 @@ There is no automatic firmware update, host permission rewrite or recovery contr
 
 ## 5. Interactive source map
 
-Open [index.html](architecture/index.html) directly after cloning. It is self-contained and needs no server, build or CDN. Its Chinese interface supports zoom/pan, module expansion, source evidence, object lifetimes and four selectable workflows: build, dataset replay, live mapping and camera-disabled validation.
+Open [index.html](architecture/index.html) directly after cloning. It is self-contained and needs no server, build or CDN. Its Chinese interface supports zoom/pan, module expansion, source evidence, object lifetimes and five selectable workflows: build, dataset replay, live mapping, camera-disabled validation and live browser viewing.
 
 [architecture.json](architecture/architecture.json) is the editable model. It records the inspected snapshot and exact source locations. A `confirmed` label establishes a source-level configuration/call, not successful hardware operation. Camera access, synchronization, accuracy, real-time behavior and mutable APT dependencies remain visible uncertainties.
 
 For map updates and checks, see [maintenance](DEVELOPMENT.md).
+
+## 6. Live browser path
+
+`live.sh visualize` starts host `live_view.py`, checks container ownership and Docker Community, and binds the loopback port first. It then starts container `live_view_bridge.py` through a `docker exec` pipe. The bridge holds the pipeline lock and creates a mapping subprocess, additionally enabling RGB preview while leaving color fusion disabled.
+
+The bridge reliably subscribes to incremental mesh and also consumes odometry, status, ESDF, RGB and depth. `live_mesh.py` merges blocks; `live_layers.py` preserves observed ESDF cells and original image timestamps while generating bounded display products. The host caches only the latest state, compressed mesh and layers. `viewer/live.html` polls read-only HTTP endpoints, draws surface/distance/trajectory in WebGL and shows JPEG previews alongside. Container networking stays disabled; no host ROS is installed.
+
+Normal shutdown attempts PLY export before stopping the owned ROS subprocess and releasing the camera. Stop validates PID and process birth time to avoid signaling a reused PID. Interrupted data is clearly marked as the last frame. See [camera operation](CAMERA.md#61-demonstration-layout-and-layer-meaning) for limits.
