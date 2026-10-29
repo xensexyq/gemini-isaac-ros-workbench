@@ -49,3 +49,12 @@ python3 -B /path/to/arch-flow/scripts/build_map.py \
 ## 4. 修改与发布
 
 下载的 SDK、数据、缓存、录包和报告不进入 Git。保留上游声明，修改使用方式或能力时同步更新两种语言。除语法外还要检查链接及 README 实际渲染，只发布已审查的源码快照。本项目没有自动发布版本或推送镜像的流程。
+
+## 5. 全局建图软件检查
+
+宿主运行完整测试；容器仅补跑依赖 NumPy/OpenCV 的检查。不要在受限容器内把宿主 Docker 生命周期模拟测试当成环境无关测试。
+
+```bash
+python3 -B -m unittest discover -s tests -v
+./scripts/live.sh exec bash -c 'cd /workspaces/isaac_ros-dev/tests && python3 -m unittest test_mapping test_live_images -v'
+```

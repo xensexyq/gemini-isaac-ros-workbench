@@ -2,6 +2,8 @@
 
 [English](ARCHITECTURE.md) · [简体中文](ARCHITECTURE-zh.md) · [首页](../README-zh.md)
 
+以下总览及交互源码图描述默认基线链路。可选模式增加 `emitter_splitter.py` 的精确元数据分流、`global_mapping.py` 的独立历史表面融合与 `rebuild_global.py` 的离线恢复；完整数据语义见[建图指南](MAPPING-zh.md)。
+
 ## 1. 系统边界
 
 本项目是容器工作台，不是新的 SLAM 算法实现。Python 和 Shell 入口负责依赖准备、镜像构建、容器管理及 ROS 输出观察。OrbbecSDK_ROS2、cuVSLAM 和 nvblox 在容器中完成采集、跟踪和重建。宿主提供 Docker 社区版、NVIDIA 驱动和 USB 设备。
@@ -24,7 +26,7 @@
 
 `orbbec_live.launch.py` 只在 `start_camera=true` 时创建相机组件，按模式决定是否开启深度和彩色。双目视觉跟踪订阅 `/camera/left_ir/image_raw`、`/camera/right_ir/image_raw` 及各自的 `camera_info`。基座坐标系为 `camera_link`，光学坐标系为 `camera_left_ir_optical_frame` 和 `camera_right_ir_optical_frame`。
 
-建图消费 `/camera/depth/image_raw` 与 `/camera/depth/camera_info`，在 `odom` 中查询变换。不融合 IMU 或颜色。交替投射关闭，因此没有投射器帧分流器。独立的 nvblox 样例回放使用录包位姿/TF，不消费另一套样例的 VSLAM 输出。
+建图消费 `/camera/depth/image_raw` 与 `/camera/depth/camera_info`，在 `odom` 中查询变换。基线不融合 IMU 或颜色，也不启用投射器帧分流。独立的 nvblox 样例回放使用录包位姿/TF，不消费另一套样例的 VSLAM 输出。
 
 ## 4. 生命周期与失败处理
 

@@ -1,0 +1,23 @@
+--- a/orbbec_camera/src/ob_camera_node.cpp
++++ b/orbbec_camera/src/ob_camera_node.cpp
+@@ -1248,6 +1248,20 @@
+                        << device_->getIntProperty(OB_PROP_LASER_POWER_LEVEL_CONTROL_INT)));
+     }
+   }
++  // Legacy Gemini 330 firmware uses SDK property 175 instead of FrameInterleave.
++  int laser_pattern = 0;
++  setAndGetNodeParameter<int>(laser_pattern, "laser_on_off_mode", 0);
++  CHECK(laser_pattern >= 0 && laser_pattern <= 2);
++  const bool pattern_supported = device_->isPropertySupported(
++      OB_PROP_LASER_ON_OFF_PATTERN_INT, OB_PERMISSION_READ_WRITE);
++  CHECK(pattern_supported || laser_pattern == 0);
++  if (pattern_supported) {
++    // Explicit zero also resets a preceding alternating runtime session.
++    device_->setIntProperty(OB_PROP_LASER_ON_OFF_PATTERN_INT, laser_pattern);
++    CHECK_EQ(device_->getIntProperty(OB_PROP_LASER_ON_OFF_PATTERN_INT), laser_pattern);
++    RCLCPP_INFO(logger_, "Legacy laser alternating pattern readback: %d", laser_pattern);
++  }
++
+   if (should_apply_launch_config("enable_laser") &&
+       device_->isPropertySupported(OB_PROP_LASER_CONTROL_INT, OB_PERMISSION_READ_WRITE)) {
+     TRY_TO_SET_PROPERTY(setIntProperty, OB_PROP_LASER_CONTROL_INT, enable_laser_);

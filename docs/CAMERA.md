@@ -2,6 +2,8 @@
 
 [English](CAMERA.md) · [简体中文](CAMERA-zh.md) · [Home](../README.md)
 
+Commands in this guide default to `baseline`. See [Mapping profiles](MAPPING.md) for emitter alternation, color fusion, standalone VIO, historical correction and persistence.
+
 ## 1. Connection and container
 
 Connect one Gemini 335L or 336L directly with a USB 3 data cable. Check that its connection reports `5000M` or higher in `lsusb -t`. Record its model, serial and firmware; verify SDK compatibility without automatically flashing firmware.
@@ -83,7 +85,7 @@ Files appear under the checkout's `runs/` directory. Check free disk space befor
 ## 5. Interpret the outputs
 
 - `/visual_slam/tracking/odometry`: camera pose relative to `odom`, suitable for plotting a trajectory. Robot-base or end-effector pose requires additional extrinsics and TF.
-- `/nvblox_node/mesh` and exported PLY: a triangle mesh of observed surfaces. Inspect local geometry, holes and ghosting in a PLY viewer. A test may also generate an offline HTML preview, linked from its local `runs/` report. Such previews use height coloring; this pipeline does not fuse camera color.
+- `/nvblox_node/mesh` and exported PLY: a triangle mesh of observed surfaces. Inspect local geometry, holes and ghosting in a PLY viewer. A test may also generate an offline HTML preview, linked from its local `runs/` report. Such previews use height coloring; baseline does not fuse camera color; `original` / `persistent` use RGB surface colors.
 - `/nvblox_node/static_map_slice`: an ESDF slice for obstacle-distance queries by a planner. This project does not integrate a complete Nav2 navigation stack, robot control or safety stopping.
 
 Initial uses include indoor robot visual localization, local obstacle reconstruction, handheld local scanning and ROS perception-pipeline experiments. A distance field does not automatically produce a feasible path, and a mesh is not a metrology-grade CAD model. With the projector disabled, depth depends on natural texture and lighting; nearby moving people, reflective surfaces and incomplete coverage can leave holes or ghosting. Integration is in `odom`; the map is not globally deformed after a VSLAM loop closure.

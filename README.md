@@ -15,7 +15,7 @@
 - View 3D surfaces, real rainbow ESDF distance fields, RGB/depth previews, camera trajectories and data age in a browser; attempt PLY export before normal shutdown.
 - Keep ROS, CUDA development packages and camera drivers inside the container, using the host's existing NVIDIA driver and Docker storage configuration.
 
-**Gemini 335L is the hardware reference.** The 336L uses a candidate configuration for the same family and still needs profile checks and hardware validation. The baseline disables the projector and does not fuse IMU or RGB color. Outputs are camera pose, geometry and distance fields; complete navigation, control and metrology accuracy are outside its scope.
+**Gemini 335L is the hardware reference.** The 336L uses a candidate configuration for the same family and still needs profile checks and hardware validation. Baseline disables the projector; `original` adds emitter alternation and colored dynamic mapping, `persistent` adds independent global surface correction, and `vio` enables standalone inertial fusion. Outputs are camera pose, geometry and distance fields; complete navigation, control and metrology accuracy are outside its scope.
 
 ## 2. Components
 
@@ -35,7 +35,7 @@
 
 ![Live mapping, browser visualization and independent dataset replay](docs/assets/architecture-en.svg)
 
-Stereo IR and CameraInfo → cuVSLAM camera pose/TF; native depth and `odom` TF → nvblox mesh/ESDF. The viewer receives incremental meshes, ESDF, RGB/depth and odometry, exposing a read-only page on host `127.0.0.1:8770` while the runtime container remains offline. The two official replay checks are independent; the nvblox bag provides its own poses/TF.
+Baseline: stereo IR and CameraInfo → cuVSLAM camera pose/TF; native depth and `odom` TF → nvblox mesh/ESDF. The viewer receives incremental meshes, ESDF, RGB/depth and odometry, exposing a read-only page on host `127.0.0.1:8770` while the runtime container remains offline. The two official replay checks are independent; the nvblox bag provides its own poses/TF.
 
 [Architecture guide](docs/ARCHITECTURE.md) · [Offline source map](docs/architecture/index.html) · [Editable model](docs/architecture/architecture.json)
 
@@ -93,6 +93,8 @@ Normal shutdown attempts to save `runs/<timestamp>-live-view/reports/live-mesh.p
 
 <a id="documentation"></a>
 ## 6. Documentation
+
+- [Mapping profiles and persistence](docs/MAPPING.md): upstream functionality, standalone VIO, historical correction, limits and recovery.
 
 - [Reproduction guide](docs/REPRODUCE.md): ordered stages, expected outputs, stopping and common failures.
 - [Installation](docs/INSTALL.md): environment, reference hardware, pinned inputs, downloads and storage.

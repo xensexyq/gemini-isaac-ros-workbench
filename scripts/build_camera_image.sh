@@ -9,3 +9,8 @@ docker build --network host --progress plain \
   --output type=image,compression=uncompressed,push=false \
   -t gemini-isaac-ros:4.6-jazzy-camera-v2.10.6 \
   -f "$ROOT/docker/Dockerfile.camera" "$ROOT/docker"
+
+# Legacy Gemini 330 firmware compatibility stays inside a derived image.
+docker build --network none --progress plain \
+  -t gemini-isaac-ros:4.6-jazzy-camera-parity \
+  -f "$ROOT/docker/Dockerfile.parity" "$ROOT/docker"

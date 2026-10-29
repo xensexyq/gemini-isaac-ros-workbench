@@ -2,6 +2,8 @@
 
 [English](CAMERA.md) · [简体中文](CAMERA-zh.md) · [首页](../README-zh.md)
 
+本指南默认命令使用 `baseline`。交替投射、彩色融合、独立 VIO、历史纠图及保存恢复见[建图模式](MAPPING-zh.md)。
+
 ## 1. 连接与容器
 
 使用 USB 3 数据线直连一台 Gemini 335L 或 336L，确认 `lsusb -t` 中相机连接显示 `5000M` 或更高。记录型号、序列号和固件，核对 SDK 兼容性，不自动刷写固件。
@@ -83,7 +85,7 @@ ros2 service call /nvblox_node/save_ply nvblox_msgs/srv/FilePath "{file_path: '$
 ## 5. 看什么结果
 
 - `/visual_slam/tracking/odometry`：相机相对 `odom` 的位姿，可用于绘制轨迹；不等于机器人底盘或机械臂末端位姿，需要额外外参和 TF。
-- `/nvblox_node/mesh` 和导出的 PLY：已观测表面的三角网格。用支持 PLY 的三维查看器检查局部形状、空洞与重影；当次测试也可以生成离线 HTML 预览，位置见本地 `runs/` 报告。实时表面默认灰白，可切换高度着色；当前建图不融合相机颜色。
+- `/nvblox_node/mesh` 和导出的 PLY：已观测表面的三角网格。用支持 PLY 的三维查看器检查局部形状、空洞与重影；当次测试也可以生成离线 HTML 预览，位置见本地 `runs/` 报告。实时表面默认灰白，可切换高度着色；基线不融合颜色，`original` / `persistent` 使用真实 RGB 颜色。
 - `/nvblox_node/static_map_slice`：ESDF 距离场切片，可作为规划器判断障碍物距离的输入；本项目没有接入完整 Nav2 导航、机器人控制或安全停车。
 
 适合先验证室内机器人视觉定位、局部障碍物建图、手持局部扫描和 ROS 感知管线。距离场并不自动得到可行路径，网格也不等于可量测的 CAD 模型。投射器关闭时深度依赖自然纹理和光照；近距离动态人员、反光面和覆盖不足都可能留下空洞或重影。地图在 `odom` 中融合，不会在 VSLAM 回环后自动整体变形优化。
@@ -124,7 +126,7 @@ ros2 service call /nvblox_node/save_ply nvblox_msgs/srv/FilePath "{file_path: '$
 | 灰白三维表面 | nvblox 增量三角网格；可切换高度色，不包含 RGB 纹理。 |
 | 彩虹距离场 | `/nvblox_node/static_map_slice` 的观测单元；红色为距离 ≤0 m，紫色为 ≥2 m，未知区域不绘制。距离是二维 ESDF，不是地面颜色或可行驶保证。 |
 | Color Image | `/camera/color/image_raw`，按原始图像比例缩小至最多 640 像素宽；仅在查看器模式额外启用 RGB，不开启颜色融合。 |
-| Depth Image | `/camera/depth/image_raw`，固定 0.2–5 m 灰度显示，近亮远暗，无效深度为黑色。原生深度和彩色未对齐。 |
+| Depth Image | `/camera/depth/image_raw`，固定 0.2–5 m 灰度显示，近亮远暗，无效深度为黑色。基线原生深度未对齐；交替模式使用软件对齐深度。 |
 
 切片位置直接使用消息的 `origin.z`，页面显示实际高度；参考网格位于 `odom z=0`，不表示自动检测到了地面。三维快照和两幅图像约 2 Hz，保留采集时间戳；图像过期会变暗并标注，不能用末帧判断实时出流。ESDF 显示最多 10 万个采样单元，大切片抽样显示，未知值不会被填成自由空间。
 

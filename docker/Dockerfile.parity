@@ -1,0 +1,12 @@
+FROM gemini-isaac-ros:4.6-jazzy-camera-v2.10.6
+USER root
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+COPY legacy-laser.patch /tmp/legacy-laser.patch
+WORKDIR /opt/orbbec_ws
+RUN cd src/OrbbecSDK_ROS2 && patch -p1 < /tmp/legacy-laser.patch \
+    && cd /opt/orbbec_ws && source /opt/ros/jazzy/setup.bash && source install/setup.bash \
+    && MAKEFLAGS=-j4 CMAKE_BUILD_PARALLEL_LEVEL=4 colcon build --merge-install --executor sequential \
+       --packages-select orbbec_camera --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DINSTALL_UDEV_RULES=OFF \
+    && rm -rf build log /tmp/legacy-laser.patch
+WORKDIR /workspaces/isaac_ros-dev
+LABEL io.orbbec.workbench.legacy-laser="property-175-runtime-only"

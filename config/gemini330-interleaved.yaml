@@ -1,0 +1,25 @@
+# SDK 2.10.6 legacy alternating laser property. Never persist firmware/settings.
+# Metadata, not frame parity, decides which frames reach each consumer.
+left_ir_fps: 60
+right_ir_fps: 60
+depth_fps: 60
+color_width: 640
+color_height: 480
+color_fps: 60
+color_format: YUYV
+depth_registration: true
+align_mode: SW
+enable_laser: true
+# FW 1.2.x runtime alternate pattern; patched wrapper exposes SDK property 175.
+laser_on_off_mode: 1
+interleave_frame_enable: false
+frame_aggregate_mode: full_frame
+# Keep camera publishing independent of slower visualization consumers.
+color_qos: sensor_data
+depth_qos: sensor_data
+left_ir_qos: sensor_data
+right_ir_qos: sensor_data
+color_qos_depth: 2
+depth_qos_depth: 2
+left_ir_qos_depth: 2
+right_ir_qos_depth: 2

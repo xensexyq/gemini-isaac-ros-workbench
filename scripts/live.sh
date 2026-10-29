@@ -2,12 +2,13 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NAME=gemini-isaac-ros-live
-IMAGE=gemini-isaac-ros:4.6-jazzy-camera-v2.10.6
+IMAGE=${GEMINI_CAMERA_IMAGE:-gemini-isaac-ros:4.6-jazzy-camera-parity}
 LABEL=gemini-isaac-ros-workbench-v1
 usage() {
   cat <<'EOF'
 用法：live.sh start|stop|status|shell|doctor|visualize-stop
-      live.sh camera|vslam|mapping|visualize [相机序列号]
+      live.sh camera|vslam|vio|mapping|visualize [相机序列号]
+      GEMINI_PROFILE=original|persistent live.sh visualize [相机序列号]
       live.sh exec <容器内命令及参数...>
 start 仅创建待命容器，不启动相机。camera/vslam/mapping 在前台运行，Ctrl+C 停止。
 首次先运行 camera 检查流。visualize 自动运行 mapping，并在 http://127.0.0.1:8770/ 实时显示。
@@ -86,12 +87,12 @@ case "$action" in
   visualize)
     require_running
     [[ $# -le 1 ]] || { usage; exit 2; }
-    exec python3 "$ROOT/scripts/live_view.py" --serial "${1:-}"
+    exec python3 "$ROOT/scripts/live_view.py" --serial "${1:-}" --profile "${GEMINI_PROFILE:-baseline}"
     ;;
-  camera|vslam|mapping)
+  camera|vslam|vio|mapping)
     require_running
     [[ $# -le 1 ]] || { usage; exit 2; }
-    launch_args=("mode:=$action")
+    launch_args=("mode:=$action" "profile:=${GEMINI_PROFILE:-baseline}")
     [[ -z "${1:-}" ]] || launch_args+=("serial_number:=$1")
     # exec 的 ros2 进程保持前台；flock 防止多终端重复占用同一相机。
     exec docker exec -it "$NAME" /opt/orbbec-entrypoint.sh \

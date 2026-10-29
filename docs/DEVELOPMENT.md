@@ -49,3 +49,12 @@ Replace `/path/to/arch-flow` with the installed skill path. The helper is a main
 ## 4. Changes and publication
 
 Keep downloaded SDKs, assets, cache, recordings and reports outside Git. Preserve upstream notices. Update both language versions when changing usage or capabilities. Check links and rendered README layout in addition to source syntax; publish only the reviewed source snapshot. This repository has no automatic release or image-push workflow.
+
+## 5. Global mapping software checks
+
+Run the full suite on the host, then array/image checks in the container. Host Docker lifecycle mocks are not environment-independent inside the restricted container.
+
+```bash
+python3 -B -m unittest discover -s tests -v
+./scripts/live.sh exec bash -c 'cd /workspaces/isaac_ros-dev/tests && python3 -m unittest test_mapping test_live_images -v'
+```

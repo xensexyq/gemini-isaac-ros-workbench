@@ -13,9 +13,10 @@
 - 无相机也能开始：检查真实 CUDA 计算，并回放 NVIDIA 官方 VSLAM / nvblox 数据。
 - 连接相机后检查彩色、左右红外、原生深度和 IMU；双目图像用于视觉定位，深度用于几何建图。
 - 浏览器实时显示三维表面、真实 ESDF 彩虹距离场、RGB/深度预览、相机轨迹和数据年龄；正常停止前尝试导出 PLY。
+- 可选择原版组合模式或保留地图模式，保存关键帧与优化位姿，停止后离线查看；动态回环效果仍需实际绕行验证。
 - ROS、CUDA 开发依赖和相机驱动留在容器内，沿用宿主已有 NVIDIA 驱动及 Docker 存储配置。
 
-**实机参考设备是 Gemini 335L。** 336L 使用同系列候选配置，仍需核对设备 profile 并完成实机验证。当前关闭投射器，不融合 IMU 或 RGB 颜色；输出是相机位姿、几何网格和距离场，不包含完整导航、控制或计量精度保证。
+**实机参考设备是 Gemini 335L。** 336L 使用同系列候选配置，仍需核对设备 profile 并完成实机验证。默认基线模式关闭投射器；`original` 接入交替投射与彩色动态建图，`persistent` 增加独立全局表面纠正，`vio` 提供独立 IMU 融合定位；输出是相机位姿、几何网格和距离场，不包含完整导航、控制或计量精度保证。
 
 ## 2. 组件与职责
 
@@ -35,7 +36,7 @@
 
 ![实机建图、浏览器查看与独立数据回放](docs/assets/architecture-zh.svg)
 
-左右 IR 和 CameraInfo → cuVSLAM 相机位姿/TF；原生深度和 `odom` TF → nvblox 网格/ESDF。实时查看器接收增量网格、ESDF、RGB/深度及里程计，在宿主 `127.0.0.1:8770` 提供只读页面，容器运行时仍不连接网络。官方两套录包检查相互独立，nvblox 录包自带位姿/TF。
+默认基线流程：左右 IR 和 CameraInfo → cuVSLAM 相机位姿/TF；原生深度和 `odom` TF → nvblox 网格/ESDF。实时查看器接收增量网格、ESDF、RGB/深度及里程计，在宿主 `127.0.0.1:8770` 提供只读页面，容器运行时仍不连接网络。官方两套录包检查相互独立，nvblox 录包自带位姿/TF。
 
 [架构说明](docs/ARCHITECTURE-zh.md) · [离线交互源码地图](docs/architecture/index.html) · [可编辑模型](docs/architecture/architecture.json)
 
@@ -89,13 +90,14 @@ python3 scripts/prepare.py visual_slam
 ./scripts/live.sh stop
 ```
 
-正常停止会尝试保存 `runs/<时间>-live-view/reports/live-mesh.ply`，通过 `bridge-summary.json` 中的 `ply_export_success` 确认结果。实时页面与之前导出的离线地图不同；停止或数据过期会明确标记。更多出流、录包和排障步骤见[相机指南](docs/CAMERA-zh.md)。
+正常停止会尝试保存 `runs/<时间>-live-view/reports/live-mesh.ply`，通过 `bridge-summary.json` 中的 `ply_export_success` 确认结果。实时页面与之前导出的离线地图不同；停止或数据过期会明确标记。原版与全局模式的启动命令见[建图指南](docs/MAPPING-zh.md)。更多出流、录包和排障步骤见[相机指南](docs/CAMERA-zh.md)。
 
 <a id="documentation"></a>
 ## 6. 文档
 
 - [复现步骤](docs/REPRODUCE-zh.md)：按阶段执行、预期结果、停止与常见故障。
 - [安装指南](docs/INSTALL-zh.md)：环境、参考硬件、固定输入、下载与存储。
+- [建图模式与保存](docs/MAPPING-zh.md)：原版功能、独立 VIO、全局历史纠图、容量与恢复边界。
 - [相机操作](docs/CAMERA-zh.md)：profile、话题、实时查看、录包和地图导出。
 - [架构说明](docs/ARCHITECTURE-zh.md)：进程边界、数据流、对象生命周期与失败处理。
 - [维护指南](docs/DEVELOPMENT-zh.md)：软件检查、容器检查和架构地图维护。

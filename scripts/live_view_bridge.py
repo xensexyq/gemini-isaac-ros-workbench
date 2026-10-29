@@ -15,8 +15,8 @@ from live_mesh import MeshState
 from live_layers import slice_snapshot, image_snapshot
 
 
-def mapping_command(root, serial=''):
-    command = ['ros2', 'launch', str(root / 'scripts/orbbec_live.launch.py'), 'mode:=mapping', 'preview_images:=true']
+def mapping_command(root, serial='', profile='baseline'):
+    command = ['ros2', 'launch', str(root / 'scripts/orbbec_live.launch.py'), 'mode:=mapping', 'preview_images:=true', 'profile:=' + profile]
     if serial:
         command.append('serial_number:=' + serial)
     return command
@@ -26,6 +26,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--serial', default='')
     parser.add_argument('--run', required=True)
+    parser.add_argument('--profile', choices=['baseline', 'original', 'persistent'], default='baseline')
     args = parser.parse_args()
     run = Path(args.run)
     for child in ('logs', 'reports'):
@@ -35,6 +36,7 @@ def main():
     from nav_msgs.msg import Odometry
     from nvblox_msgs.msg import Mesh, DistanceMapSlice
     from sensor_msgs.msg import Image
+    from std_msgs.msg import String
     from isaac_ros_visual_slam_interfaces.msg import VisualSlamStatus
     from rclpy.qos import QoSProfile, ReliabilityPolicy
 
@@ -49,7 +51,7 @@ def main():
     signal.signal(signal.SIGTERM, request_stop)
     node = rclpy.create_node('gemini_live_view')
     mesh = MeshState()
-    stats = dict(mesh_messages=0, odom_messages=0, rejected_mesh_updates=0,
+    stats = dict(profile=args.profile, esdf_source='combined_map_slice' if args.profile == 'original' else 'static_map_slice', mesh_messages=0, odom_messages=0, rejected_mesh_updates=0,
                  mesh_revision=0, vo_state=0, max_displacement_m=0., error=None)
     last_mesh = last_odom = None
     pose = None
@@ -68,7 +70,8 @@ def main():
             for block in msg.blocks:
                 p = [v for point in block.vertices for v in (point.x, point.y, point.z)]
                 n = [v for point in block.normals for v in (point.x, point.y, point.z)]
-                blocks.append((p, n, list(block.triangles)))
+                c = [v for color in block.colors for v in (color.r, color.g, color.b)]
+                blocks.append((p, n, list(block.triangles), c))
             mesh.apply([(x.x, x.y, x.z) for x in msg.block_indices], blocks,
                        clear=msg.clear, frame=msg.header.frame_id)
             last_mesh = time.monotonic()
@@ -127,32 +130,41 @@ def main():
         except (ValueError, RuntimeError) as error:
             layer_errors[kind] = str(error)
 
+    def on_splitter(msg):
+        stats['splitter'] = json.loads(msg.data)
+
     subscriptions = [
+        node.create_subscription(String, '/splitter/status', on_splitter, 1),
         node.create_subscription(Mesh, '/nvblox_node/mesh', on_mesh,
                                  QoSProfile(depth=100, reliability=ReliabilityPolicy.RELIABLE)),
         node.create_subscription(Odometry, '/visual_slam/tracking/odometry', on_odom,
                                  QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)),
         node.create_subscription(VisualSlamStatus, '/visual_slam/status', on_status, 10),
-        node.create_subscription(DistanceMapSlice, '/nvblox_node/static_map_slice', on_slice, 1),
+        node.create_subscription(DistanceMapSlice, '/nvblox_node/combined_map_slice' if args.profile == 'original' else '/nvblox_node/static_map_slice', on_slice, 1),
         node.create_subscription(Image, '/camera/color/image_raw', lambda m: on_image(m, 'color'),
                                  QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)),
         node.create_subscription(Image, '/camera/depth/image_raw', lambda m: on_image(m, 'depth'),
                                  QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)),
     ]
+    global_map = None
+    if args.profile == 'persistent':
+        from global_mapping import GlobalCollector
+        global_map = GlobalCollector(node, run / 'global', '/splitter/depth')
     root = Path(__file__).resolve().parents[1]
     log = (run / 'logs/mapping.log').open('w')
-    launch = subprocess.Popen(mapping_command(root, args.serial),
+    launch = subprocess.Popen(mapping_command(root, args.serial, args.profile),
                               cwd=run, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     emitted_revision = -1
+    emitted_global_revision = -1
     sequence = 0
     next_emit = time.monotonic()
     started = time.monotonic()
 
     def emit(running):
-        nonlocal sequence, emitted_revision
+        nonlocal sequence, emitted_revision, emitted_global_revision
         now = time.monotonic()
         hz = (len(odom_times)-1)/(odom_times[-1]-odom_times[0]) if len(odom_times) > 1 else 0.
-        meta = dict(stats, sequence=sequence, running=running, frame='odom',
+        meta = dict(stats, sequence=sequence, running=running, frame='odom', session_id=run.name,
                     wall_time=time.time(), elapsed_seconds=now-started,
                     mesh_age_ms=(now-last_mesh)*1000 if last_mesh is not None else None,
                     odom_age_ms=(now-last_odom)*1000 if last_odom is not None else None,
@@ -162,6 +174,13 @@ def main():
         meta['layer_age_ms'] = {k: (now-v)*1000 for k, v in layer_times.items()}
         meta['esdf_cells'] = layers.get('esdf', {}).get('count', 0)
         packet = dict(meta=meta, layers=dict(layers, sequence=sequence))
+        if global_map is not None:
+            meta['global_map'] = dict(global_map.map.status)
+            if global_map.map.mesh is not None and global_map.map.mesh['revision'] != emitted_global_revision:
+                global_packet=dict(meta=meta,global_mesh=global_map.map.mesh)
+                sys.stdout.write(json.dumps(global_packet,separators=(',', ':'),allow_nan=False)+'\n')
+                sys.stdout.flush()
+                emitted_global_revision=global_map.map.mesh['revision']
         if mesh.revision != emitted_revision:
             packet['mesh'] = mesh.snapshot()
             emitted_revision = mesh.revision
@@ -173,25 +192,50 @@ def main():
             meta.update({k: stats.get(k, 0) for k in ('vertices', 'triangles', 'blocks')})
         sys.stdout.write(json.dumps(packet, separators=(',', ':'), allow_nan=False) + '\n')
         sys.stdout.flush()
-        (run / 'reports/bridge-summary.json').write_text(json.dumps(meta, indent=2))
+        summary=run/'reports/bridge-summary.json'
+        temporary=summary.with_suffix('.tmp');temporary.write_text(json.dumps(meta, indent=2));os.replace(temporary,summary)
         sequence += 1
 
     try:
         while not stop:
             rclpy.spin_once(node, timeout_sec=.02)
+            if global_map is not None:
+                try:
+                    global_map.tick()
+                except Exception as error:
+                    global_map.map.status['error'] = str(error)
             if launch.poll() is not None:
                 lines = (run / 'logs/mapping.log').read_text(errors='replace').splitlines()
                 detail = lines[-1][:300] if lines else '请查看当次 mapping.log'
                 stats['error'] = f'建图启动失败（{launch.returncode}）：{detail}'
                 break
             now = time.monotonic()
+            if (now-started > 25 and stats['odom_messages'] == 0) or (last_odom is not None and now-last_odom>10):
+                stats['error'] = '定位未启动或中断超过 10 秒；请检查相机配置、分流状态和 mapping.log'
+                break
             if now >= next_emit:
                 emit(True)
                 next_emit = time.monotonic() + .5
     except BrokenPipeError:
         stop = True
     finally:
+        if global_map is not None:
+            try:
+                global_map.close()
+            except Exception as error:
+                global_map.map.status['error'] = str(error)
         # Export while the mapping node is still alive, then release the camera.
+        if args.profile == 'persistent' and stats.get('odom_messages',0) and launch.poll() is None and rclpy.ok():
+            try:
+                from isaac_ros_visual_slam_interfaces.srv import FilePath as SlamFilePath
+                client=node.create_client(SlamFilePath,'/visual_slam/save_map')
+                if client.wait_for_service(timeout_sec=1):
+                    directory=run/'global/slam-map';directory.mkdir(exist_ok=True)
+                    future=client.call_async(SlamFilePath.Request(file_path=str(directory)))
+                    rclpy.spin_until_future_complete(node,future,timeout_sec=5)
+                    stats['slam_map_saved']=bool(future.done() and future.result() and future.result().success)
+            except Exception as error:
+                stats['slam_export_error']=str(error)
         if stats.get('vertices', 0) and launch.poll() is None and rclpy.ok():
             try:
                 from nvblox_msgs.srv import FilePath

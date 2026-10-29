@@ -165,5 +165,27 @@ class LayerApiTests(LiveApiTests):
         self.assertEqual(json.loads(gzip.decompress(data))['sequence'], 9)
 
 
+
+class SavedViewerTests(unittest.TestCase):
+    def test_empty_process_record_is_stale_and_atomic_record_is_readable(self):
+        from unittest.mock import patch
+        import live_view
+        with tempfile.TemporaryDirectory() as tmp:
+            record=Path(tmp)/'active.json';record.write_text('')
+            with patch.object(live_view,'ACTIVE',record):
+                self.assertEqual(live_view.active_record(),{})
+                live_view.write_active({'pid':123,'start_ticks':'456'})
+                self.assertEqual(live_view.active_record()['pid'],123)
+                self.assertFalse(record.with_suffix('.tmp').exists())
+
+    def test_saved_empty_map_and_global_map_can_be_restored(self):
+        latest=Latest()
+        latest.update({'meta':{'running':False},'mesh':{},'global_mesh':{}})
+        self.assertEqual(latest.status()['available_global_revision'],-1)
+        latest.update({'meta':{'running':False},'global_mesh':{'revision':3,'vertices':12}})
+        latest.update({'meta':{'running':False},'mesh':{'revision':5,'vertices':9}})
+        self.assertEqual(latest.status()['available_global_revision'],3)
+        self.assertEqual(json.loads(gzip.decompress(latest.global_mesh))['vertices'],12)
+
 if __name__ == '__main__':
     unittest.main()

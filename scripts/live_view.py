@@ -2,6 +2,7 @@
 """Local HTTP viewer with an isolated Docker ROS worker over a pipe, no host ROS."""
 import argparse
 import gzip
+import fcntl
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -34,11 +35,24 @@ def process_matches(record, proc=Path('/proc')):
         return False
 
 
+def active_record():
+    try:
+        record=json.loads(ACTIVE.read_text())
+        return record if isinstance(record,dict) else {}
+    except (OSError,ValueError):
+        return {}
+
+
+def write_active(record):
+    temporary=ACTIVE.with_suffix('.tmp')
+    temporary.write_text(json.dumps(record,indent=2));os.replace(temporary,ACTIVE)
+
+
 def stop_active():
     if not ACTIVE.exists():
         print('没有本项目的实时查看器记录。')
         return
-    record = json.loads(ACTIVE.read_text())
+    record = active_record()
     if not process_matches(record):
         print('实时查看器已停止或记录过期；未向任何进程发送信号。')
         return
@@ -59,26 +73,33 @@ class Latest:
         self.mesh = gzip.compress(b'{}', compresslevel=1)
         self.revision = -1
         self.layers = gzip.compress(b'{}', compresslevel=1)
+        self.global_mesh = gzip.compress(b'{}', compresslevel=1)
+        self.global_revision = -1
 
     def update(self, packet):
         meta = packet['meta']
+        global_data = packet.get('global_mesh')
+        global_compressed = gzip.compress(json.dumps(global_data, separators=(',', ':')).encode(), compresslevel=1) if global_data and global_data['revision'] != self.global_revision else None
         data = packet.get('mesh')
         compressed = gzip.compress(json.dumps(data, separators=(',', ':')).encode(), compresslevel=1) if data else None
         layer_data = packet.get('layers')
         layer_compressed = gzip.compress(json.dumps(layer_data, separators=(',', ':')).encode(), compresslevel=1) if layer_data is not None else None
         with self.lock:
+            if global_compressed is not None:
+                self.global_mesh = global_compressed
+                self.global_revision = global_data['revision']
             if layer_compressed is not None:
                 self.layers = layer_compressed
             self.meta = meta
             self.received_at = time.monotonic()
-            if data is not None:
+            if data and 'revision' in data:
                 self.mesh = compressed
                 self.revision = data['revision']
 
     def status(self):
         with self.lock:
             return dict(self.meta, relay_age_ms=(time.monotonic()-self.received_at)*1000,
-                        available_mesh_revision=self.revision)
+                        available_mesh_revision=self.revision, available_global_revision=self.global_revision)
 
 
 def handler_for(latest):
@@ -100,6 +121,11 @@ def handler_for(latest):
             elif route == '/api/layers':
                 with latest.lock:
                     body = latest.layers
+                compressed = True
+                mime = 'application/json'
+            elif route == '/api/global':
+                with latest.lock:
+                    body = latest.global_mesh
                 compressed = True
                 mime = 'application/json'
             elif route == '/api/mesh':
@@ -134,7 +160,9 @@ def handler_for(latest):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--serial', default='')
+    parser.add_argument('--profile', choices=['baseline', 'original', 'persistent'], default='baseline')
     parser.add_argument('--stop', action='store_true')
+    parser.add_argument('--replay', type=Path, help='Read-only viewer for a stopped run directory')
     parser.add_argument('--port', type=int, default=8770)
     parser.add_argument('--run', type=Path)
     parser.add_argument('--duration', type=float, help='Bounded validation run in seconds')
@@ -142,7 +170,38 @@ def main():
     if args.stop:
         stop_active()
         return 0
-    if ACTIVE.exists() and process_matches(json.loads(ACTIVE.read_text())):
+    (ROOT/'runs').mkdir(exist_ok=True)
+    singleton=(ROOT/'runs/live-view.lock').open('a')
+    try: fcntl.flock(singleton,fcntl.LOCK_EX|fcntl.LOCK_NB)
+    except BlockingIOError: parser.error('已有本项目查看器，请先执行 live.sh visualize-stop')
+    if process_matches(active_record()):
+        parser.error('已有本项目查看器，请先执行 live.sh visualize-stop')
+    if args.replay:
+        run=args.replay.resolve()
+        try: run.relative_to(ROOT/'runs')
+        except ValueError: parser.error('--replay must be inside project runs/')
+        saved=run/'reports/viewer-snapshot.json'
+        if saved.stat().st_size>2*MAX_PACKET: parser.error('Replay exceeds viewer packet limit')
+        latest=Latest();packet=json.loads(saved.read_text());packet['meta']['running']=False
+        latest.update(packet)
+        server=ThreadingHTTPServer(('127.0.0.1',args.port),handler_for(latest))
+        server.timeout=.25
+        stopping=threading.Event()
+        signal.signal(signal.SIGINT,lambda *_:stopping.set())
+        signal.signal(signal.SIGTERM,lambda *_:stopping.set())
+        ticks=Path(f'/proc/{os.getpid()}/stat').read_text().rsplit(') ',1)[1].split()[19]
+        write_active(dict(pid=os.getpid(),start_ticks=ticks,run=str(run),replay=True))
+        print(f'已保存地图（不启动相机）：http://127.0.0.1:{args.port}/',flush=True)
+        started=time.monotonic()
+        try:
+            while not stopping.is_set():
+                server.handle_request()
+                if args.duration and time.monotonic()-started>=args.duration: break
+        finally:
+            server.server_close()
+            if ACTIVE.exists() and active_record().get('pid')==os.getpid(): ACTIVE.unlink()
+        return 0
+    if ACTIVE.exists() and process_matches(active_record()):
         parser.error('已有本项目实时查看器，请先运行 scripts/live.sh visualize-stop')
     info = json.loads(subprocess.check_output(['docker', 'inspect', CONTAINER], text=True))[0]
     if info['Config']['Labels'].get('io.isaac-orbbec.task') != LABEL or not info['State']['Running']:
@@ -168,7 +227,7 @@ def main():
     worker = subprocess.Popen(['docker', 'exec', CONTAINER, '/opt/orbbec-entrypoint.sh',
                                'flock', '--nonblock', '/tmp/isaac-live-pipeline.lock',
                                'python3', '/workspaces/isaac_ros-dev/scripts/live_view_bridge.py',
-                               '--run', c_run, '--serial', args.serial],
+                               '--run', c_run, '--serial', args.serial, '--profile', args.profile],
                               stdout=subprocess.PIPE, stderr=worker_log)
     stopping = threading.Event()
 
@@ -202,7 +261,7 @@ def main():
     started = time.monotonic()
     (run / 'reports/viewer-pid.txt').write_text(str(os.getpid()))
     ticks = Path(f'/proc/{os.getpid()}/stat').read_text().rsplit(') ', 1)[1].split()[19]
-    ACTIVE.write_text(json.dumps(dict(pid=os.getpid(), start_ticks=ticks, run=str(run)), indent=2))
+    write_active(dict(pid=os.getpid(), start_ticks=ticks, run=str(run)))
     (run / 'reports/viewer.json').write_text(json.dumps(dict(url=f'http://127.0.0.1:{args.port}/',
                                                            run=str(run), container=CONTAINER), indent=2))
     print(f'实时查看器：http://127.0.0.1:{args.port}/\n记录：{run}\nCtrl+C 停止本次相机管线及查看器。', flush=True)
@@ -230,11 +289,18 @@ def main():
             worker.wait(timeout=5)
         reader.join(timeout=2)
         server.server_close()
-        if ACTIVE.exists() and json.loads(ACTIVE.read_text()).get('pid') == os.getpid():
+        if ACTIVE.exists() and active_record().get('pid') == os.getpid():
             ACTIVE.unlink()
         (run / 'reports/viewer-final.json').write_text(json.dumps(latest.status(), indent=2))
+        with latest.lock:
+            saved=dict(meta=latest.meta,mesh=json.loads(gzip.decompress(latest.mesh)),
+                       global_mesh=json.loads(gzip.decompress(latest.global_mesh)),
+                       layers=json.loads(gzip.decompress(latest.layers)))
+        snapshot=run/'reports/viewer-snapshot.json'
+        temporary=snapshot.with_suffix('.tmp');temporary.write_text(json.dumps(saved,separators=(',',':')))
+        os.replace(temporary,snapshot)
         worker_log.close()
-    return 0
+    return 1 if latest.status().get('error') else 0
 
 
 if __name__ == '__main__':
