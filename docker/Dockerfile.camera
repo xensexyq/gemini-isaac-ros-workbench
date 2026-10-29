@@ -1,0 +1,35 @@
+ARG BASE_IMAGE=gemini-isaac-ros:4.6-jazzy
+FROM ${BASE_IMAGE}
+USER root
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN --mount=type=cache,id=isaac-orbbec-camera-apt,target=/var/cache/apt,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+    && apt-get update --error-on=any \
+    && apt-get install -y --no-install-recommends \
+      libgflags-dev nlohmann-json3-dev libgoogle-glog-dev libdw-dev libssl-dev \
+      libgl-dev libusb-1.0-0-dev \
+      ros-jazzy-backward-ros ros-jazzy-camera-info-manager \
+      ros-jazzy-camera-calibration-parsers ros-jazzy-image-publisher \
+      ros-jazzy-image-transport-plugins ros-jazzy-diagnostic-updater \
+      ros-jazzy-statistics-msgs python3-psutil python3-tabulate usbutils \
+    && rm -rf /var/lib/apt/lists/*
+COPY orbbec-src/ /opt/orbbec_ws/src/OrbbecSDK_ROS2/
+WORKDIR /opt/orbbec_ws
+RUN source /opt/ros/jazzy/setup.bash \
+    && MAKEFLAGS=-j4 CMAKE_BUILD_PARALLEL_LEVEL=4 colcon build \
+      --merge-install --executor sequential \
+      --packages-up-to orbbec_camera \
+      --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DINSTALL_UDEV_RULES=OFF \
+    && rm -rf build log
+COPY camera-entrypoint.sh /opt/orbbec-entrypoint.sh
+RUN chmod 755 /opt/orbbec-entrypoint.sh
+ENV HOME=/tmp/isaac-home
+ENV ROS_LOG_DIR=/tmp/isaac-ros-logs
+ENV ROS_DOMAIN_ID=112
+ENV ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+WORKDIR /workspaces/isaac_ros-dev
+ENTRYPOINT ["/opt/orbbec-entrypoint.sh"]
+CMD ["bash"]
+LABEL org.opencontainers.image.description="Isaac ROS 4.6 Jazzy with Orbbec ROS2 v2.10.6 (x64), no host changes"
+LABEL io.orbbec.wrapper.revision="296156521b60bdf813cb94c46cbb55562bbdc453"

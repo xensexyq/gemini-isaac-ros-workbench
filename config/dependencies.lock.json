@@ -1,0 +1,23 @@
+{
+  "base_image": "nvcr.io/nvidia/isaac/ros@sha256:4e2c1db3fa880649bc0aeefcc3d2a263d9c636e4ce8a30803cd784bd26f43442",
+  "orbbec_revision": "296156521b60bdf813cb94c46cbb55562bbdc453",
+  "examples_package": {
+    "url": "https://isaac.download.nvidia.com/isaac-ros/release-4.6/pool/main/r/ros-jazzy-nvblox-examples-bringup/ros-jazzy-nvblox-examples-bringup_4.6.0-0noble.20260818193553000_amd64.deb",
+    "bytes": 45378,
+    "sha256": "8b0358eb69725c0fc5804005c099285b1f744562b3c4fbc7b6e96cafd991c437"
+  },
+  "datasets": {
+    "visual_slam": {
+      "bytes": 641870836,
+      "sha256": "32d5b2723b6c6b1998f669f31f1889ebb739e0ada6a5d78c699108e528f15f68",
+      "version": "4.0.0",
+      "metadata": "isaac_ros_visual_slam/quickstart_bag/metadata.yaml"
+    },
+    "nvblox": {
+      "bytes": 9340835840,
+      "sha256": "455a748f5c41dae5a5e3cc33735894ad95ed5c9ec5bee219fb3a7284006b6383",
+      "version": "4.0.0",
+      "metadata": "isaac_ros_nvblox/quickstart/metadata.yaml"
+    }
+  }
+}

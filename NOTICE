@@ -1,0 +1,23 @@
+Gemini Isaac ROS Workbench
+
+An independent integration project inspired by https://github.com/orbbec/isaac_ros-dev.
+It is not an official NVIDIA or Orbbec distribution.
+
+Project-authored code currently has no blanket license grant. Public visibility
+does not replace a license. Copyright 2026 xensexyq.
+
+scripts/nvblox_static_validation.launch.py is adapted from NVIDIA Isaac ROS
+nvblox_examples_bringup/launch/examples/isaac_sim_example.launch.py. It retains
+its NVIDIA copyright and Apache-2.0 header. The adaptation selects the isolated
+multithreaded executor. See LICENSES/Apache-2.0.txt.
+
+The architecture HTML renderer is generated using arch-flow:
+https://github.com/xensexyq/xcodex-skills (skills/arch-flow).
+
+OrbbecSDK_ROS2 sources and x64 SDK binaries are downloaded on demand from the
+official Orbbec repository. Their original LICENSE, NOTICE and SDK licenses
+remain in the downloaded tree; they are not relicensed by this project.
+
+NVIDIA container images, ROS binary packages and NGC sample datasets are
+downloaded from their official sources and remain subject to their original
+licenses and terms. This repository does not redistribute those artifacts.

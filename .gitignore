@@ -1,0 +1,16 @@
+/assets/
+/runs/
+/.cache/
+/docker/orbbec-src/
+/docker/official-examples/
+__pycache__/
+*.py[cod]
+*.bag
+*.db3
+*.mcap
+*.ply
+*.deb
+*.tar
+*.tar.gz
+.env
+.env.*
