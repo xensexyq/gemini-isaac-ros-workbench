@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>项目架构与运行流程地图</title><style>:root{font-family:system-ui,-apple-system,"Noto Sans CJK SC","Microsoft YaHei",sans-serif;color:#1e293b;background:#f3f5f8;font-size:14px}*{box-sizing:border-box}body{margin:0}header{padding:26px 32px 18px;background:white;border-bottom:1px solid #dce3ec}.eyebrow{color:#0e7490;font-size:11px;letter-spacing:2px;font-weight:700}h1{font-size:26px;margin:8px 0}h2{font-size:17px;margin:0 0 12px}h3{font-size:15px;margin:12px 0 7px}p{line-height:1.65;margin:8px 0;color:#475569}main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;padding:20px 28px}.workspace,.panel{background:white;border:1px solid #dce3ec;border-radius:12px;overflow:hidden}.panel{padding:18px;margin-bottom:14px}aside{max-height:calc(100vh - 180px);overflow:auto}button,select{font:inherit;border:1px solid #cbd5e1;background:white;border-radius:7px;padding:7px 11px;color:#334155}button{cursor:pointer}button:hover{background:#eaf3ff;border-color:#60a5fa}button:disabled{opacity:.4;cursor:default}button:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #60a5fa;outline-offset:2px}.toolbar{display:flex;align-items:center;gap:7px;padding:12px;flex-wrap:wrap}.hint{font-size:12px;color:#64748b}.legend{display:flex;flex-wrap:wrap;gap:13px;padding:4px 14px 12px;font-size:12px}.sync{color:#475569}.async{color:#7c3aed}.data{color:#0e7490}#canvas{display:block;width:100%;height:430px;background-color:#fbfcfe;background-image:radial-gradient(#d6deea .8px,transparent .8px);background-size:20px 20px;touch-action:none;cursor:grab}#canvas:active{cursor:grabbing}.node{cursor:pointer}.node rect{fill:white;stroke:#b7c4d5;stroke-width:1.5;rx:10}.node.active rect{stroke:#2563eb;stroke-width:3;fill:#eff6ff}.node.selected rect{stroke:#ea580c;stroke-width:3}.node text{fill:#1e293b;pointer-events:none}.node .tag{font-size:11px;fill:#64748b}.node:focus{outline:none}.node:focus rect{stroke:#ea580c;stroke-width:3}.edge path{fill:none;stroke-width:1.8}.edge.sync path{stroke:#64748b}.edge.async path{stroke:#8b5cf6;stroke-dasharray:8 5}.edge.data path{stroke:#0891b2}.edge.active path{stroke-width:4}.edge text{font-size:12px;fill:#334155;paint-order:stroke;stroke:#fbfcfe;stroke-width:5;stroke-linejoin:round}.edge.dim{opacity:.22}.node.dim{opacity:.45}.playback{padding:18px;border-top:1px solid #dce3ec}.playback select{max-width:100%;margin-left:9px}.step-controls{display:flex;gap:12px;align-items:center;margin:14px 0}.badge{display:inline-block;font-size:11px;background:#e8f1ef;color:#047857;padding:3px 7px;border-radius:5px}.badge.inferred{background:#fef3c7;color:#92400e}.badge.unknown{background:#fce7f3;color:#9d174d}ul{padding-left:20px;line-height:1.7}pre,.source{font-family:ui-monospace,monospace;font-size:12px;white-space:pre-wrap;word-break:break-word}.source{padding:8px;background:#f1f5f9;border-radius:5px;margin-top:5px}.item{border-top:1px solid #e2e8f0;padding:10px 0}summary{cursor:pointer;color:#475569}.small{font-size:12px;color:#64748b}footer{padding:5px 28px 20px;color:#64748b;font-size:12px}footer button{margin-left:14px}.node-nav{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}@media(min-width:1500px){#canvas{height:540px}}@media(max-width:950px){main{grid-template-columns:1fr;padding:14px}aside{max-height:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}.panel{margin:0}header{padding:20px}#canvas{height:380px}}
+:is(.edge){cursor:pointer}.edge path.hit{stroke:transparent;stroke-width:24;pointer-events:stroke}
+</style></head>
+<body>
+<header><div class="eyebrow">SOURCE → STRUCTURE → FLOW</div><h1 id="title"></h1><p id="summary"></p><details><summary>源码快照与分析范围</summary><pre id="snapshot"></pre></details></header>
+<main>
+<section class="workspace" aria-label="交互架构画布">
+<div class="toolbar"><button id="zoom-in" aria-label="放大">＋</button><button id="zoom-out" aria-label="缩小">−</button><button id="reset">重置视图</button><button id="overview">整体概览</button><span id="scale"></span><span class="hint">滚轮缩放 · 拖动平移 · 点击节点查看证据</span></div>
+<div class="legend"><span class="sync">→ 同步调用</span><span class="async">⇢ 异步交接</span><span class="data">→ 数据读写</span><span>✓ 代码已确认</span><span>≈ 有依据推断</span><span>？尚未确认</span></div>
+<svg id="canvas" aria-label="项目模块和有方向的关系"><defs><marker id="arrow-sync" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/></marker><marker id="arrow-async" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6"/></marker><marker id="arrow-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#0891b2"/></marker></defs><g id="viewport"><g id="edges"></g><g id="nodes"></g></g></svg>
+<section class="playback" aria-live="polite"><label for="scenario">关键场景</label><select id="scenario"></select><div class="step-controls"><button id="prev">上一步</button><span id="progress"></span><button id="next">下一步</button></div><div id="step"></div></section>
+</section>
+<aside><section class="panel" id="inspector"><h2>模块详情</h2><p>点击节点查看职责、关联对象与代码位置。</p></section><section class="panel"><h2>尚待核实</h2><div id="uncertainties"></div></section><section class="panel"><h2>文档与实现差异</h2><div id="differences"></div></section></aside>
+</main>
+<footer>连线类型表示调用或数据含义；可信度表示证据强度。代码确认不等于线上运行或真机验收。<button id="download">下载地图数据</button></footer>
+<script type="application/json" id="architecture-model">{"version": 1, "project": {"name": "Gemini Isaac ROS Workbench", "root": ".", "branch": "codex/initial-publication", "head": "8d65614948337dd225eb2f84c05d8a87991a0e05", "dirty": true, "inspectedAt": "2026-10-29T13:23:30+08:00", "summary": "从固定输入、Docker 镜像到独立数据回放和 Gemini 双目视觉 / 深度建图的实际配置。", "scopeNotes": ["源码证据对应记录的核心提交；地图及双语文档在该提交后的工作区生成，dirty 表示这些文档尚未提交。", "confirmed 表示源码可确认该配置或调用，不表示真实相机或性能已验证。", "Orbbec 固定提交：296156521b60bdf813cb94c46cbb55562bbdc453；Isaac ROS 4.6 / Jazzy。"]}, "evidence": [{"id": "download", "path": "scripts/prepare.py", "line": 28, "symbol": "download", "note": "下载最多尝试四次；校验长度与 SHA-256 后原子替换，中断保留分段。"}, {"id": "driver-input", "path": "scripts/prepare.py", "line": 91, "symbol": "prepare_driver / verify_source", "note": "固定提交、逐文件清单和哈希；已有修改保留并报错。"}, {"id": "examples", "path": "scripts/prepare.py", "line": 130, "symbol": "prepare_examples", "note": "校验官方 Debian 包并只提取数据文件，不安装宿主软件。"}, {"id": "assets", "path": "scripts/prepare.py", "line": 155, "symbol": "prepare_dataset / extract_dataset", "note": "校验 NGC 归档后解压，检查空间和元数据准备标记。"}, {"id": "lock", "path": "config/dependencies.lock.json", "line": 2, "symbol": "base_image / examples_package / datasets", "note": "固定容器摘要、驱动提交和官方输入校验值。"}, {"id": "build", "path": "scripts/build_image.sh", "line": 5, "symbol": "build_image.sh", "note": "先准备样例配置，再同步执行 Docker 构建；要求社区版。"}, {"id": "camera-build", "path": "scripts/build_camera_image.sh", "line": 7, "symbol": "build_camera_image.sh", "note": "检查本项目基础镜像标签后准备驱动、构建相机镜像。"}, {"id": "docker", "path": "docker/Dockerfile", "line": 2, "symbol": "FROM / apt-get / COPY", "note": "核心依赖仅在容器中通过 APT 安装，复制已提取样例配置。"}, {"id": "camera-docker", "path": "docker/Dockerfile.camera", "line": 20, "symbol": "colcon build / INSTALL_UDEV_RULES=OFF", "note": "在镜像中编译驱动；关闭驱动测试构建和 udev 规则安装。"}, {"id": "live", "path": "scripts/live.sh", "line": 27, "symbol": "live.sh dispatch", "note": "区分待命、前台模式、同容器终端和停止操作。"}, {"id": "idle", "path": "scripts/live.sh", "line": 37, "symbol": "start / docker run", "note": "待命进程为 sleep infinity；映射 USB 总线及本项目，关闭网络和特权。"}, {"id": "owner", "path": "scripts/live.sh", "line": 16, "symbol": "owned / running", "note": "用本任务标签识别容器，拒绝停止同名外部容器。"}, {"id": "exec", "path": "scripts/live.sh", "line": 83, "symbol": "camera|vslam|mapping", "note": "非阻塞锁拒绝重复管线；docker exec 前台运行 ROS launch。"}, {"id": "stop", "path": "scripts/live.sh", "line": 51, "symbol": "stop", "note": "显式停止后自动移除容器，不删除镜像和输出文件。"}, {"id": "camera", "path": "scripts/orbbec_live.launch.py", "line": 30, "symbol": "_launch / OBCameraNodeDriver", "note": "按 start_camera 开关创建驱动组件容器；相机参数来自 YAML。"}, {"id": "slam", "path": "scripts/orbbec_live.launch.py", "line": 39, "symbol": "_launch / VisualSlamNode", "note": "配置双目视觉模式、左右红外订阅和相机 TF 坐标系。"}, {"id": "mapping", "path": "scripts/orbbec_live.launch.py", "line": 66, "symbol": "_launch / NvbloxNode", "note": "配置单路原生深度、odom TF、无颜色建图和多线程组件容器。"}, {"id": "config", "path": "config/gemini330.yaml", "line": 23, "symbol": "enable_laser / profiles / time_domain", "note": "候选流参数、激光关闭、时间域和 SDK 同步参数。"}, {"id": "replay", "path": "scripts/validate_environment.sh", "line": 22, "symbol": "validate_environment.sh", "note": "回放容器不映射 USB，数据目录只读，GPU 检查后按模式运行回放。"}, {"id": "run-dir", "path": "scripts/validate_environment.sh", "line": 9, "symbol": "RUN / finish", "note": "创建本次报告目录；退出 trap 保存状态并停止容器。"}, {"id": "vslam-bag", "path": "scripts/run_vslam.sh", "line": 23, "symbol": "run_vslam.sh", "note": "等待输入订阅后以 0.2 倍速重映射官方双目数据。"}, {"id": "nvblox-bag", "path": "scripts/run_nvblox.sh", "line": 27, "symbol": "run_nvblox.sh", "note": "以 0.25 倍速和录包时钟回放；录包自带 TF，结束后请求 PLY 导出。"}, {"id": "observe", "path": "scripts/observe_outputs.py", "line": 25, "symbol": "receive / discover", "note": "实际订阅位姿、网格与 ESDF；有效移动位姿或非空网格决定退出状态。"}, {"id": "gpu", "path": "scripts/gpu_smoke.py", "line": 6, "symbol": "gpu_smoke.py / libcuda", "note": "通过驱动 API 执行实际 CUDA 内核并检查返回值。"}, {"id": "offline", "path": "scripts/check_live_startup.py", "line": 22, "symbol": "camera-disabled startup", "note": "无相机检查显式禁止创建相机节点，等待完整装载并读回参数。"}, {"id": "ignore", "path": ".gitignore", "line": 1, "symbol": ".gitignore", "note": "原始数据、报告、缓存及下载的第三方源码不纳入版本控制。"}], "nodes": [{"id": "entry", "label": "命令入口", "kind": "entry", "responsibility": "构建、回放检查、待命容器与前台实机模式。", "x": 30, "y": 40, "confidence": "confirmed", "evidence": ["build", "live", "replay"]}, {"id": "prepare", "label": "依赖准备", "kind": "module", "responsibility": "固定来源下载、完整性校验、提取与已有修改保护。", "x": 320, "y": 40, "confidence": "confirmed", "evidence": ["download", "driver-input", "examples", "assets"]}, {"id": "upstream", "label": "官方上游", "kind": "external", "responsibility": "NVIDIA 镜像/包/NGC 数据及 Orbbec 固定提交的请求目标；可达性由实际网络决定。", "x": 610, "y": 40, "confidence": "confirmed", "evidence": ["lock", "download"]}, {"id": "build", "label": "镜像构建", "kind": "module", "responsibility": "Docker 核心镜像与相机镜像，编译驱动并保留原始许可。", "x": 320, "y": 250, "confidence": "confirmed", "evidence": ["docker", "camera-docker"]}, {"id": "images", "label": "本地镜像", "kind": "storage", "responsibility": "由 Docker 管理的镜像；停止容器后继续保留，位置沿用引擎配置。", "x": 610, "y": 250, "confidence": "confirmed", "evidence": ["build", "camera-build", "stop"]}, {"id": "container", "label": "待命 / 前台容器", "kind": "worker", "responsibility": "先待命，显式启动前台管线；共享 USB 总线，镜像根只读，网络关闭。", "x": 920, "y": 250, "confidence": "confirmed", "evidence": ["idle", "exec", "stop"]}, {"id": "storage", "label": "本地输入与结果", "kind": "storage", "responsibility": "下载缓存、源码、数据集和每次运行日志/报告/PLY；排除在 Git 之外。", "x": 30, "y": 470, "confidence": "confirmed", "evidence": ["assets", "run-dir", "ignore"]}, {"id": "ros", "label": "ROS 处理链", "kind": "module", "responsibility": "驱动、cuVSLAM 和 nvblox 由独立组件容器进程承载；展开查看接口。", "x": 610, "y": 470, "confidence": "confirmed", "evidence": ["camera", "slam", "mapping"]}, {"id": "device", "label": "Gemini / GPU", "kind": "external", "responsibility": "配置面向 Gemini 335L/336L 和 NVIDIA GPU；真实相机兼容性待连接验证。", "x": 920, "y": 470, "confidence": "confirmed", "evidence": ["config", "idle", "gpu"]}, {"id": "driver", "label": "相机驱动", "kind": "detail", "responsibility": "发布相机流、CameraInfo、IMU 与内部 TF；profile 是候选值。", "x": 300, "y": 690, "confidence": "confirmed", "evidence": ["camera", "config"], "parent": "ros"}, {"id": "vslam", "label": "双目视觉定位", "kind": "detail", "responsibility": "配置 tracking_mode=0，消费左右红外及 CameraInfo，发布位姿和 TF。", "x": 610, "y": 690, "confidence": "confirmed", "evidence": ["slam"], "parent": "ros"}, {"id": "nvblox", "label": "深度几何建图", "kind": "detail", "responsibility": "配置 native depth + odom TF；use_color=false，提供网格与导出服务。", "x": 920, "y": 690, "confidence": "confirmed", "evidence": ["mapping", "nvblox-bag"], "parent": "ros"}], "edges": [{"id": "prepare-call", "from": "entry", "to": "prepare", "kind": "sync", "label": "准备并校验依赖", "confidence": "confirmed", "evidence": ["build", "camera-build"]}, {"id": "fetch", "from": "upstream", "to": "prepare", "kind": "data", "label": "下载固定字节与源码", "confidence": "confirmed", "evidence": ["download", "driver-input", "lock"]}, {"id": "cache", "from": "prepare", "to": "storage", "kind": "data", "label": "保存缓存 / 源码 / 数据", "confidence": "confirmed", "evidence": ["driver-input", "assets", "examples"]}, {"id": "build-call", "from": "entry", "to": "build", "kind": "sync", "label": "执行 Docker build", "confidence": "confirmed", "evidence": ["build", "camera-build"]}, {"id": "build-input", "from": "prepare", "to": "build", "kind": "data", "label": "提供校验后的构建输入", "confidence": "confirmed", "evidence": ["docker", "camera-docker", "examples"]}, {"id": "image-out", "from": "build", "to": "images", "kind": "data", "label": "生成本地镜像标签", "confidence": "confirmed", "evidence": ["build", "camera-build"]}, {"id": "run-image", "from": "images", "to": "container", "kind": "data", "label": "作为容器根文件系统", "confidence": "confirmed", "evidence": ["idle"]}, {"id": "control", "from": "entry", "to": "container", "kind": "sync", "label": "待命 / exec / stop", "confidence": "confirmed", "evidence": ["live", "idle", "exec", "stop"]}, {"id": "ros-start", "from": "container", "to": "ros", "kind": "async", "label": "ROS launch 管理组件进程", "confidence": "confirmed", "evidence": ["exec", "camera", "slam", "mapping"]}, {"id": "usb", "from": "device", "to": "driver", "kind": "data", "label": "配置 USB 相机输入路径", "confidence": "confirmed", "evidence": ["idle", "camera", "config"]}, {"id": "ir", "from": "driver", "to": "vslam", "kind": "data", "label": "左右 IR 与 CameraInfo 订阅配置", "confidence": "confirmed", "evidence": ["slam"]}, {"id": "depth", "from": "driver", "to": "nvblox", "kind": "data", "label": "原生深度与 CameraInfo 订阅配置", "confidence": "confirmed", "evidence": ["mapping"]}, {"id": "tf", "from": "vslam", "to": "nvblox", "kind": "data", "label": "odom 相机 TF 配置", "confidence": "confirmed", "evidence": ["slam", "mapping"]}, {"id": "replay-data", "from": "storage", "to": "ros", "kind": "data", "label": "独立官方录包回放", "confidence": "confirmed", "evidence": ["replay", "vslam-bag", "nvblox-bag"]}, {"id": "report", "from": "ros", "to": "storage", "kind": "data", "label": "位姿 / 网格观察与导出请求", "confidence": "confirmed", "evidence": ["observe", "nvblox-bag", "run-dir"]}, {"id": "cuda", "from": "container", "to": "device", "kind": "sync", "label": "GPU 透传与 CUDA 内核检查", "confidence": "confirmed", "evidence": ["replay", "gpu", "idle"]}], "objects": [{"id": "inputs", "name": "固定依赖与下载文件", "lifecycle": "由 prepare 创建于 .cache、docker 下载目录和 assets；中断分段保留。修改的驱动源码触发拒绝，脚本不替用户删除修改。", "states": ["缺失", "部分下载", "校验通过", "准备完成", "已有修改导致拒绝"], "createdBy": ["prepare"], "readBy": ["prepare", "build", "ros"], "writtenBy": ["prepare"], "relations": ["锁定文件记录来源与校验值", "元数据准备标记不等于全量录包审计"], "confidence": "confirmed", "evidence": ["download", "driver-input", "assets", "lock"]}, {"id": "image", "name": "Docker 镜像", "lifecycle": "构建成功后保存在 Docker 自有存储中；容器停止不清理镜像，项目不迁移全局存储。", "states": ["未构建", "构建中", "可用于启动"], "createdBy": ["build"], "readBy": ["container"], "writtenBy": ["build"], "relations": ["核心镜像是相机镜像基础", "APT 依赖在构建时解析"], "confidence": "confirmed", "evidence": ["docker", "camera-docker", "build", "stop"]}, {"id": "live-session", "name": "实机容器与管线锁", "lifecycle": "start 创建 sleep 待命；显式 exec 启动一种模式，flock 拒绝重复管线；stop 后 --rm 移除。", "states": ["不存在", "待命", "前台模式运行", "停止并移除"], "createdBy": ["entry"], "readBy": ["entry", "ros"], "writtenBy": ["entry"], "relations": ["标签识别本任务容器", "相机只在显式模式中启动"], "confidence": "confirmed", "evidence": ["owner", "idle", "exec", "stop"]}, {"id": "run", "name": "运行报告与网格", "lifecycle": "每次验证创建 runs 子目录，观察脚本写 JSON 与日志，导出服务接收 PLY 路径；结果保留，无自动过期策略。", "states": ["已创建", "检查运行中", "成功或失败记录", "本地保留"], "createdBy": ["entry"], "readBy": ["entry"], "writtenBy": ["ros", "entry"], "relations": ["官方 VSLAM 与 nvblox 样例独立", "真实相机记录不属于公开仓库"], "confidence": "confirmed", "evidence": ["run-dir", "observe", "nvblox-bag", "ignore"]}], "scenarios": [{"id": "build", "title": "01 · 准备依赖并构建镜像", "trigger": "运行 build_image.sh，随后运行 build_camera_image.sh。", "outcome": "生成核心与相机镜像标签；不安装宿主 ROS/SDK，不推送镜像。", "steps": [{"title": "准备输入", "explanation": "入口同步调用 prepare，按锁定来源和文件清单下载。", "nodes": ["entry", "prepare", "upstream"], "edges": ["prepare-call", "fetch"], "data": ["基础镜像摘要", "官方包与驱动文件校验值"], "result": "缓存输入可供校验。", "branches": ["网络异常最多尝试四次，中断分段保留。"], "confidence": "confirmed", "evidence": ["build", "download", "driver-input", "lock"]}, {"title": "校验与保留修改", "explanation": "已存在驱动文件需要匹配哈希；有修改时保留并报错。样例包只提取配置。", "nodes": ["prepare", "storage", "build"], "edges": ["cache", "build-input"], "data": [".cache/", "docker/orbbec-src/", "docker/official-examples/"], "result": "构建输入准备完成。", "branches": ["哈希不符不发布下载结果；已修改文件不被覆盖。"], "confidence": "confirmed", "evidence": ["driver-input", "examples", "download"]}, {"title": "镜像内安装和编译", "explanation": "Docker 在镜像内安装核心包，随后编译相机驱动；构建脚本等待退出状态。", "nodes": ["entry", "build", "images"], "edges": ["build-call", "image-out"], "data": ["核心镜像", "相机镜像"], "result": "本地镜像可用于后续运行。", "branches": ["APT 或编译失败直接退出，不自动重写宿主依赖。"], "confidence": "confirmed", "evidence": ["build", "camera-build", "docker", "camera-docker"]}]}, {"id": "dataset", "title": "02 · 官方数据集与 GPU 检查", "trigger": "准备选定数据后运行 validate_environment.sh。", "outcome": "保存本次输出观察报告，停止回放容器；两套样例独立。", "steps": [{"title": "校验和解压数据", "explanation": "prepare 从官方 NGC 下载固定版本，校验归档与剩余空间，再按 data filter 解压。", "nodes": ["upstream", "prepare", "storage"], "edges": ["fetch", "cache"], "data": ["录包归档", "metadata.yaml", "准备标记"], "result": "离线输入已准备。", "branches": ["空间不足或归档异常时停止；准备标记只检查元数据身份。"], "confidence": "confirmed", "evidence": ["assets", "download"]}, {"title": "创建无 USB 回放容器", "explanation": "入口创建容器并运行 CUDA 内核检查；输入目录只读映射。", "nodes": ["entry", "images", "container", "device"], "edges": ["control", "run-image", "cuda"], "data": ["GPU 内核结果", "新 runs 目录"], "result": "GPU 计算检查有实际输出。", "branches": ["Docker 社区版身份或 GPU 检查失败时退出并清理本次容器。"], "confidence": "confirmed", "evidence": ["replay", "gpu", "run-dir"]}, {"title": "消费录包并观察输出", "explanation": "脚本等待输入订阅，然后按指定速率回放；观察有效移动位姿或非空网格。", "nodes": ["storage", "ros"], "edges": ["replay-data", "report"], "data": ["VSLAM 位姿", "nvblox 网格/ESDF", "日志"], "result": "输出 JSON 明确记录 PASS/FAIL。", "branches": ["无订阅或输出时等待有上限；nvblox 使用录包 TF，不证明联合定位误差。"], "confidence": "confirmed", "evidence": ["vslam-bag", "nvblox-bag", "observe"]}, {"title": "结束与保留", "explanation": "退出 trap 保存状态、停止容器；结果目录继续保留。", "nodes": ["entry", "container", "storage"], "edges": ["control"], "data": ["退出码", "日志", "导出请求"], "result": "容器移除，结果供用户检查。", "branches": ["导出服务进程有超时；PLY 内容仍应检查，ROS CLI 返回不替代几何验收。"], "confidence": "confirmed", "evidence": ["run-dir", "nvblox-bag"]}]}, {"id": "live", "title": "03 · 从待命到实机几何建图", "trigger": "连接相机后显式运行 start，再运行 camera / vslam / mapping。", "outcome": "配置相机→双目视觉→深度建图；数据与效果待真实相机验证。", "steps": [{"title": "只创建待命容器", "explanation": "start 使用只读镜像根、无网络和 USB 总线映射，进程为 sleep，不创建相机节点。", "nodes": ["entry", "images", "container"], "edges": ["control", "run-image"], "data": ["USB 访问配置", "任务标签"], "result": "容器待命。", "branches": ["同名外部容器会被拒绝；相机热插拔能力须实测。"], "confidence": "confirmed", "evidence": ["idle", "owner"]}, {"title": "显式选择模式", "explanation": "docker exec 前台运行 launch，flock 防止同一容器并发打开管线；launch 根据模式创建组件进程。", "nodes": ["entry", "container", "ros"], "edges": ["control", "ros-start"], "data": ["mode", "serial_number", "camera YAML"], "result": "选定管线开始执行。", "branches": ["重复启动直接拒绝；多台相机应明确指定序列号。"], "confidence": "confirmed", "evidence": ["exec", "camera", "config"]}, {"title": "双目视觉定位接口", "explanation": "驱动配置提供左右红外与 CameraInfo，VSLAM 配置订阅这些话题并使用相机 TF；IMU 不融合。", "nodes": ["device", "driver", "vslam"], "edges": ["usb", "ir"], "data": ["IR 图像", "CameraInfo", "相机内部 TF"], "result": "建立双目视觉定位的数据路径。", "branches": ["profile、标定与时间同步需设备确认；仅有代码配置不证明图像有效。"], "confidence": "confirmed", "evidence": ["camera", "slam", "config"]}, {"title": "原生深度几何建图", "explanation": "mapping 模式的 nvblox 订阅原生深度并查找 odom TF，颜色关闭。", "nodes": ["driver", "vslam", "nvblox"], "edges": ["depth", "tf"], "data": ["毫米深度", "odom→camera_link TF"], "result": "配置几何网格与距离场输出。", "branches": ["无激光深度依赖纹理/光照；odom 地图不会随回环整体变形优化。"], "confidence": "confirmed", "evidence": ["mapping", "config"]}, {"title": "切换或停止", "explanation": "Ctrl+C 结束前台模式后可启动另一模式；stop 终止并移除本项目容器，输出保留。", "nodes": ["entry", "container", "storage"], "edges": ["control"], "data": ["前台进程", "管线锁", "本地记录"], "result": "会话结束。", "branches": ["没有相机重试策略或固件升级逻辑；保留错误后人工排查。"], "confidence": "confirmed", "evidence": ["exec", "stop", "ignore"]}]}, {"id": "offline", "title": "04 · 不启动相机的软件验收", "trigger": "运行 validate_camera_setup.sh。", "outcome": "驱动、GPU、USB 映射配置与算法组件可检查；不代表相机通过。", "steps": [{"title": "确认独占检查会话", "explanation": "验证入口拒绝复用已有实机容器，再创建本项目待命容器并检查运行配置。", "nodes": ["entry", "container"], "edges": ["control"], "data": ["inspect JSON", "驱动版本与依赖"], "result": "会话隔离，不干扰已有采集。", "branches": ["发现已有容器时退出，用户结束会话后再检查。"], "confidence": "confirmed", "evidence": ["owner", "idle", "offline"]}, {"title": "显式禁用相机节点", "explanation": "检查程序以 start_camera=false 启动 mapping，仅加载算法组件并等待完整就绪。", "nodes": ["container", "ros", "device"], "edges": ["ros-start", "cuda"], "data": ["参数读回", "订阅数量", "save_ply 服务"], "result": "无相机软件接口可验证。", "branches": ["120 秒内未就绪或组件异常退出时报告失败。"], "confidence": "confirmed", "evidence": ["offline", "slam", "mapping", "gpu"]}, {"title": "保存并停止", "explanation": "组件经 SIGINT 正常结束，验证入口保存报告并移除待命容器。", "nodes": ["entry", "container", "storage"], "edges": ["control"], "data": ["startup.json", "退出码"], "result": "软件证据保留；实机仍待验收。", "branches": ["真实 USB 打开、数据时序、精度和实时性能均不由本检查证明。"], "confidence": "confirmed", "evidence": ["offline", "run-dir", "stop"]}]}], "uncertainties": [{"topic": "相机与 USB 实机行为", "detail": "已配置 USB 映射、驱动和候选 profile；源码不能证明设备实际可打开、配对或热插拔稳定。", "neededEvidence": "连接 335L/336L，记录固件/序列号，检查 USB 3、流 profile、CameraInfo、TF 与时间戳并录包。"}, {"topic": "实时质量与定位精度", "detail": "慢速官方录包及无相机启动不代表实机实时帧率、延迟、漂移或联合误差。", "neededEvidence": "在受控场景测量处理速率、静止抖动、回程误差、跟踪丢失和网格重影。"}, {"topic": "重建一致性", "detail": "基础镜像、驱动和数据固定，但 APT 包版本在构建时解析。", "neededEvidence": "如需逐字节可重复构建，需另行冻结全部 APT 包与构建环境。"}, {"topic": "上游语义与扩展", "detail": "投射器交替、IMU 融合、彩色建图、GUI 和导航不在已配置的初始链路中。", "neededEvidence": "逐项实现其配置/数据适配并开展对应实机验收，不能直接套用旧 3.0 配置。"}], "docDifferences": []}</script><script>(() => {
+  "use strict";
+  const model = JSON.parse(document.getElementById("architecture-model").textContent);
+  const $ = id => document.getElementById(id);
+  const byId = rows => new Map(rows.map(row => [row.id, row]));
+  const nodes = byId(model.nodes), evidence = byId(model.evidence);
+  const confidence = {confirmed: "✓ 代码已确认", inferred: "≈ 有依据推断", unknown: "？尚未确认"};
+  const kinds = {entry: "入口", module: "模块", storage: "存储", external: "外部系统", worker: "后台任务", detail: "内部细节", sync: "同步调用", async: "异步交接", data: "数据读写"};
+  const state = {expanded: new Set(), scene: -1, step: -1, selected: null, zoom: 1, x: 0, y: 0};
+  const svgNS = "http://www.w3.org/2000/svg";
+  function el(tag, text, cls) {
+    const element = document.createElement(tag);
+    if (text !== undefined) element.textContent = text;
+    if (cls) element.className = cls;
+    return element;
+  }
+  function svg(tag, attrs, text) {
+    const element = document.createElementNS(svgNS, tag);
+    for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, value);
+    if (text !== undefined) element.textContent = text;
+    return element;
+  }
+  function badge(item, parent) { parent.append(el("span", confidence[item.confidence], `badge ${item.confidence}`)); }
+  function list(title, rows, parent) {
+    if (!rows.length) return;
+    parent.append(el("h3", title));
+    const ul = el("ul"); rows.forEach(row => ul.append(el("li", row))); parent.append(ul);
+  }
+  function proofs(ids, parent) {
+    if (!ids.length) return;
+    const details = el("details"), summary = el("summary", `代码证据 (${ids.length})`);
+    details.append(summary);
+    for (const id of ids) {
+      const e = evidence.get(id), row = el("div", undefined, "item");
+      row.append(el("div", `${e.path}:${e.line} · ${e.symbol}`, "source"), el("p", e.note));
+      details.append(row);
+    }
+    parent.append(details);
+  }
+  function claimNotes(item, parent) {
+    badge(item, parent);
+    if (item.rationale) parent.append(el("p", `推断依据：${item.rationale}`));
+    if (item.verification) parent.append(el("p", `核实方式：${item.verification}`));
+    proofs(item.evidence, parent);
+  }
+  function children(id) { return model.nodes.filter(n => n.parent === id); }
+  function visible(n) { return !n.parent || (state.expanded.has(n.parent) && visible(nodes.get(n.parent))); }
+  function representative(id) {
+    let n = nodes.get(id);
+    while (!visible(n)) n = nodes.get(n.parent);
+    return n;
+  }
+  function reveal(id) {
+    let n = nodes.get(id);
+    while (n.parent) { state.expanded.add(n.parent); n = nodes.get(n.parent); }
+  }
+  function currentStep() { return state.step < 0 ? null : model.scenarios[state.scene].steps[state.step]; }
+  function transform() {
+    $("viewport").setAttribute("transform", `translate(${state.x} ${state.y}) scale(${state.zoom})`);
+    $("scale").textContent = `${Math.round(state.zoom * 100)}%`;
+  }
+  function fit() {
+    const shown = model.nodes.filter(visible);
+    const left = Math.min(...shown.map(n => n.x)) - 60, top = Math.min(...shown.map(n => n.y)) - 60;
+    const right = Math.max(...shown.map(n => n.x + 200)) + 60, bottom = Math.max(...shown.map(n => n.y + 94)) + 60;
+    const box = $("canvas").getBoundingClientRect();
+    state.zoom = Math.max(.08, Math.min(1.5, box.width / (right - left), box.height / (bottom - top)));
+    state.x = (box.width - (right - left) * state.zoom) / 2 - left * state.zoom;
+    state.y = (box.height - (bottom - top) * state.zoom) / 2 - top * state.zoom;
+    transform();
+  }
+  function zoom(factor, cx, cy) {
+    const box = $("canvas").getBoundingClientRect();
+    cx = cx ?? box.width / 2; cy = cy ?? box.height / 2;
+    const next = Math.max(.08, Math.min(4, state.zoom * factor)), ratio = next / state.zoom;
+    state.x = cx - (cx - state.x) * ratio; state.y = cy - (cy - state.y) * ratio;
+    state.zoom = next; transform();
+  }
+  function activate(element, action) {
+    element.addEventListener("click", action);
+    element.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); action(); }
+    });
+  }
+  function draw() {
+    $("nodes").replaceChildren(); $("edges").replaceChildren();
+    const step = currentStep(), activeNodes = new Set(step?.nodes.map(id => representative(id).id) || []);
+    const activeEdges = new Set(step?.edges || []), routes = new Map();
+    for (const e of model.edges) {
+      const a = representative(e.from), b = representative(e.to);
+      if (a.id === b.id && e.from !== e.to) continue;
+      const pair = [a.id, b.id].sort().join("\u0000"), index = routes.get(pair) || 0;
+      routes.set(pair, index + 1);
+      let path, lx, ly;
+      const ax = a.x + 100, ay = a.y + 47, bx = b.x + 100, by = b.y + 47;
+      if (a.id === b.id) {
+        path = `M ${a.x + 60} ${a.y} C ${a.x - 20} ${a.y - 90} ${a.x + 230} ${a.y - 90} ${a.x + 150} ${a.y}`;
+        lx = ax; ly = a.y - 55;
+      } else {
+        const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
+        const scale = Math.min(100 / (Math.abs(dx) || .001), 47 / (Math.abs(dy) || .001));
+        const sx = ax + dx * scale, sy = ay + dy * scale, tx = bx - dx * scale, ty = by - dy * scale;
+        const bend = index === 0 ? -22 : (index % 2 ? 1 : -1) * (28 + index * 14);
+        const qx = (sx + tx) / 2 - dy / len * bend, qy = (sy + ty) / 2 + dx / len * bend;
+        path = `M ${sx} ${sy} Q ${qx} ${qy} ${tx} ${ty}`;
+        lx = (sx + tx) / 4 + qx / 2; ly = (sy + ty) / 4 + qy / 2 - 8;
+      }
+      const g = svg("g", {class: `edge ${e.kind} ${activeEdges.has(e.id) ? "active" : step ? "dim" : ""}`, "data-edge-id": e.id, role: "button", tabindex: "0", "aria-label": `${a.label} → ${b.label}：${e.label}`});
+      g.append(svg("path", {d: path, class: "hit"}), svg("path", {d: path, "marker-end": `url(#arrow-${e.kind})`}), svg("text", {x: lx, y: ly, "text-anchor": "middle"}, `${e.confidence === "inferred" ? "≈ " : e.confidence === "unknown" ? "？ " : ""}${e.label}`));
+      activate(g, () => inspectEdge(e)); $("edges").append(g);
+    }
+    for (const n of model.nodes.filter(visible)) {
+      const g = svg("g", {class: `node ${activeNodes.has(n.id) ? "active" : step ? "dim" : ""} ${state.selected === n.id ? "selected" : ""}`, transform: `translate(${n.x} ${n.y})`, "data-node-id": n.id, tabindex: "0", role: "button", "aria-label": `查看${n.label}`});
+      g.append(svg("rect", {width: 200, height: 94}), svg("text", {x: 13, y: 19, class: "tag"}, `${kinds[n.kind]}${children(n.id).length ? ` · ${state.expanded.has(n.id) ? "已展开" : "可展开"}` : ""}`));
+      const label = Array.from(n.label);
+      g.append(svg("text", {x: 13, y: 40}, label.slice(0, 13).join("")));
+      if (label.length > 13) g.append(svg("text", {x: 13, y: 58}, label.slice(13, 25).join("") + (label.length > 25 ? "…" : "")));
+      g.append(svg("text", {x: 13, y: 80, class: "tag"}, confidence[n.confidence]));
+      activate(g, () => inspectNode(n.id)); $("nodes").append(g);
+    }
+    transform();
+  }
+  function nodeButtons(ids, parent) {
+    const nav = el("div", undefined, "node-nav");
+    for (const id of ids) { const b = el("button", nodes.get(id).label); b.onclick = () => inspectNode(id, true); nav.append(b); }
+    parent.append(nav);
+  }
+  function inspectNode(id, shouldReveal = false) {
+    if (shouldReveal) { reveal(id); fit(); }
+    state.selected = id;
+    const n = nodes.get(id), panel = $("inspector"); panel.replaceChildren(el("h2", n.label), el("p", n.responsibility));
+    claimNotes(n, panel);
+    const child = children(id);
+    if (child.length) {
+      const button = el("button", state.expanded.has(id) ? "收起模块细节" : "展开模块细节");
+      button.onclick = () => {
+        if (state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id);
+        inspectNode(id); fit();
+      };
+      panel.append(button); nodeButtons(child.map(n => n.id), panel);
+    }
+    const related = model.objects.filter(o => [...o.createdBy, ...o.readBy, ...o.writtenBy].includes(id));
+    if (related.length) panel.append(el("h3", "关联业务对象"));
+    for (const o of related) {
+      const d = el("details"), names = ids => ids.map(id => nodes.get(id).label).join("、") || "未发现 / 不适用";
+      d.append(el("summary", o.name), el("p", o.lifecycle));
+      list("状态 / 阶段", o.states, d); list("对象关联", o.relations, d);
+      d.append(el("p", `创建：${names(o.createdBy)}；读取：${names(o.readBy)}；写入：${names(o.writtenBy)}`));
+      claimNotes(o, d); panel.append(d);
+    }
+    const links = model.edges.filter(e => e.from === id || e.to === id);
+    if (links.length) panel.append(el("h3", "有方向的关系"));
+    for (const e of links) { const button = el("button", `${nodes.get(e.from).label} → ${nodes.get(e.to).label} · ${e.label}`, "small"); button.onclick = () => inspectEdge(e); const row = el("div", undefined, "item"); row.append(button); panel.append(row); }
+    draw();
+  }
+  function inspectEdge(e) {
+    state.selected = null; draw();
+    const p = $("inspector"); p.replaceChildren(el("h2", e.label), el("p", `${nodes.get(e.from).label} → ${nodes.get(e.to).label} · ${kinds[e.kind]}`));
+    claimNotes(e, p); nodeButtons([e.from, e.to], p);
+  }
+  function showStep() {
+    const p = $("step"), scene = model.scenarios[state.scene], step = currentStep();
+    p.replaceChildren();
+    $("prev").disabled = !scene || state.step < 0;
+    $("next").disabled = !scene || state.step >= scene.steps.length - 1;
+    $("progress").textContent = !scene ? "整体概览" : state.step < 0 ? `场景概览 · ${scene.steps.length} 步` : `${state.step + 1} / ${scene.steps.length}`;
+    if (!scene) { p.append(el("p", "先看整体架构，再选择关键场景逐步探索。")); draw(); return; }
+    if (!step) { p.append(el("h2", scene.title), el("p", `触发：${scene.trigger}`), el("p", `最终结果：${scene.outcome}`)); draw(); return; }
+    step.nodes.forEach(reveal);
+    p.append(el("h2", step.title), el("p", step.explanation));
+    list("数据变化 / 读取", step.data, p); p.append(el("p", `本步结果：${step.result}`));
+    list("失败处理 / 重试 / 分支", step.branches, p); claimNotes(step, p);
+    draw(); fit();
+  }
+  $("title").textContent = `${model.project.name} · 架构与运行流程`;
+  $("summary").textContent = model.project.summary;
+  $("snapshot").textContent = `根目录：${model.project.root}\n分支：${model.project.branch}\nHEAD：${model.project.head}\n工作区：${model.project.dirty ? "有未提交改动；以检查时的实际文件为准" : "干净"}\n检查时间：${model.project.inspectedAt}\n${(model.project.scopeNotes || []).join("\n")}`;
+  $("scenario").append(new Option("整体概览", "-1"));
+  model.scenarios.forEach((s, i) => $("scenario").append(new Option(s.title, String(i))));
+  $("scenario").onchange = () => { state.scene = Number($("scenario").value); state.step = -1; showStep(); };
+  $("prev").onclick = () => { state.step--; showStep(); };
+  $("next").onclick = () => { state.step++; showStep(); };
+  $("zoom-in").onclick = () => zoom(1.2); $("zoom-out").onclick = () => zoom(1 / 1.2);
+  $("reset").onclick = fit;
+  $("overview").onclick = () => { state.expanded.clear(); state.scene = state.step = -1; state.selected = null; $("scenario").value = "-1"; $("inspector").replaceChildren(el("h2", "模块详情"), el("p", "点击节点查看职责、关联对象与代码位置。")); showStep(); fit(); };
+  $("canvas").addEventListener("wheel", event => { event.preventDefault(); const r = $("canvas").getBoundingClientRect(); zoom(Math.exp(-event.deltaY * .001), event.clientX - r.left, event.clientY - r.top); }, {passive: false});
+  let drag = null;
+  $("canvas").addEventListener("pointerdown", event => {
+    if (event.button !== 0 || event.target.closest(".node,.edge")) return;
+    drag = {x: event.clientX, y: event.clientY}; $("canvas").setPointerCapture(event.pointerId);
+  });
+  $("canvas").addEventListener("pointermove", event => { if (!drag) return; state.x += event.clientX - drag.x; state.y += event.clientY - drag.y; drag = {x: event.clientX, y: event.clientY}; transform(); });
+  for (const event of ["pointerup", "pointercancel", "lostpointercapture"]) $("canvas").addEventListener(event, () => { drag = null; });
+  for (const u of model.uncertainties) { const row = el("div", undefined, "item"); row.append(el("h3", u.topic), el("p", u.detail), el("p", `所需证据：${u.neededEvidence}`)); $("uncertainties").append(row); }
+  if (!model.uncertainties.length) $("uncertainties").append(el("p", "本次分析范围内未列出额外待核实项；不代表运行时已验收。"));
+  for (const d of model.docDifferences) { const row = el("div", undefined, "item"); row.append(el("p", `文档：${d.documentation}`), el("p", `实现：${d.implementation}`)); proofs(d.evidence, row); $("differences").append(row); }
+  if (!model.docDifferences.length) $("differences").append(el("p", "检查范围内未发现文档与实现差异。"));
+  $("download").onclick = () => { const url = URL.createObjectURL(new Blob([JSON.stringify(model, null, 2)], {type: "application/json"})); const a = el("a"); a.href = url; a.download = "architecture.json"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
+  window.addEventListener("resize", fit);
+  showStep(); fit();
+})();
+</script>
+</body></html>

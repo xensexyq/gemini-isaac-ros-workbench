@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 470" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10" fill="#52627a"/></marker></defs>
+<rect width="1060" height="470" rx="18" fill="#f4f7fb"/>
+<text x="24" y="28" font-size="17" font-family="sans-serif" fill="#334155">依赖准备 → 容器执行 → 本地输出</text>
+<g stroke="#52627a" stroke-width="2" fill="none" marker-end="url(#a)">
+<path d="M220 90H290"/><path d="M490 90H560"/><path d="M220 250H290"/><path d="M490 250H560"/><path d="M760 250H830"/><path d="M930 210V130"/>
+<path d="M660 130V175H390V210"/><path d="M390 290V325H930V290"/><path d="M220 400H660V290"/><path d="M660 400H1000V290"/>
+</g>
+<rect x="20" y="50" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="120" y="96" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">固定依赖输入</text>
+<rect x="290" y="50" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="390" y="96" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Docker 镜像</text>
+<rect x="560" y="50" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="660" y="96" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">容器入口</text>
+<rect x="830" y="50" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="930" y="96" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">报告 / PLY</text>
+<rect x="20" y="210" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="120" y="256" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Gemini 相机</text>
+<rect x="290" y="210" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="390" y="256" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Orbbec 驱动</text>
+<rect x="560" y="210" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="660" y="256" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">cuVSLAM</text>
+<rect x="830" y="210" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="930" y="256" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">nvblox</text>
+<rect x="20" y="360" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="120" y="406" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">官方录包</text>
+<text x="510" y="237" font-family="sans-serif" font-size="14" fill="#43556e">红外</text>
+<text x="770" y="237" font-family="sans-serif" font-size="14" fill="#43556e">odom TF</text>
+<text x="575" y="320" font-family="sans-serif" font-size="14" fill="#43556e">原生深度</text>
+<text x="325" y="443" font-family="sans-serif" font-size="14" fill="#43556e">独立回放；nvblox 使用录包 TF</text>
+<text x="470" y="168" font-family="sans-serif" font-size="14" fill="#43556e">显式选择模式</text>
+</svg>

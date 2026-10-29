@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 470" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10" fill="#52627a"/></marker></defs>
+<rect width="1060" height="470" rx="18" fill="#f4f7fb"/>
+<text x="24" y="28" font-size="17" font-family="sans-serif" fill="#334155">Build inputs → isolated execution → local outputs</text>
+<g stroke="#52627a" stroke-width="2" fill="none" marker-end="url(#a)">
+<path d="M220 90H290"/><path d="M490 90H560"/><path d="M220 250H290"/><path d="M490 250H560"/><path d="M760 250H830"/><path d="M930 210V130"/>
+<path d="M660 130V175H390V210"/><path d="M390 290V325H930V290"/><path d="M220 400H660V290"/><path d="M660 400H1000V290"/>
+</g>
+<rect x="20" y="50" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="120" y="96" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Pinned inputs</text>
+<rect x="290" y="50" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="390" y="96" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Docker images</text>
+<rect x="560" y="50" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="660" y="96" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Container entry</text>
+<rect x="830" y="50" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="930" y="96" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Reports / PLY</text>
+<rect x="20" y="210" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="120" y="256" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Gemini camera</text>
+<rect x="290" y="210" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="390" y="256" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Orbbec driver</text>
+<rect x="560" y="210" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="660" y="256" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">cuVSLAM</text>
+<rect x="830" y="210" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="930" y="256" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">nvblox</text>
+<rect x="20" y="360" width="200" height="80" rx="12" fill="white" stroke="#b9c9dd"/>
+<text x="120" y="406" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172338">Official bags</text>
+<text x="515" y="237" font-family="sans-serif" font-size="14" fill="#43556e">IR</text>
+<text x="770" y="237" font-family="sans-serif" font-size="14" fill="#43556e">odom TF</text>
+<text x="575" y="320" font-family="sans-serif" font-size="14" fill="#43556e">native depth</text>
+<text x="325" y="443" font-family="sans-serif" font-size="14" fill="#43556e">independent replay; nvblox uses recorded TF</text>
+<text x="470" y="168" font-family="sans-serif" font-size="14" fill="#43556e">explicit mode</text>
+</svg>
