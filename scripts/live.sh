@@ -33,6 +33,7 @@ case "$action" in
       running || { echo '已有停止的同任务容器，请先执行 live.sh stop。' >&2; exit 1; }
       echo "容器已待命：$NAME"; exit 0
     fi
+    [[ -r "$ROOT/config/fastdds.xml" ]] || { echo '缺少容器 Fast DDS 配置。' >&2; exit 1; }
     [[ -d /dev/bus/usb ]] || { echo '/dev/bus/usb 不存在，未创建容器。' >&2; exit 1; }
     docker run --rm -d --init --name "$NAME" --label "io.isaac-orbbec.task=$LABEL" \
       --gpus all --network none --shm-size=2g --memory=20g --cpus=12 \
@@ -42,14 +43,17 @@ case "$action" in
       --mount type=bind,src=/dev/bus/usb,dst=/dev/bus/usb \
       --mount "type=bind,src=$ROOT,dst=/workspaces/isaac_ros-dev" \
       -e NVIDIA_DRIVER_CAPABILITIES=compute,utility \
+      -e FASTRTPS_DEFAULT_PROFILES_FILE=/workspaces/isaac_ros-dev/config/fastdds.xml \
       "$IMAGE" sleep infinity
     echo "容器已待命：$NAME；尚未启动相机。"
     ;;
   stop)
     if docker inspect "$NAME" >/dev/null 2>&1; then
       owned || { echo '拒绝停止其他任务容器。' >&2; exit 1; }
-      docker stop --time 15 "$NAME"
-      if docker inspect "$NAME" >/dev/null 2>&1; then docker rm "$NAME"; fi
+      auto_remove="$(docker inspect --format '{{.HostConfig.AutoRemove}}' "$NAME")"
+      docker stop --timeout 15 "$NAME"
+      # --rm 容器由 Docker 自动删除；再次 inspect/rm 会与自动删除发生竞态。
+      if [[ "$auto_remove" != true ]]; then docker rm "$NAME"; fi
     else
       echo '实机容器未运行。'
     fi

@@ -14,6 +14,11 @@ Connect one Gemini 335L or 336L directly with a USB 3 data cable. Check that its
 
 `start` creates an idle container and does not start a camera. It binds `/dev/bus/usb` and grants character device major 189 read/write access for re-enumeration. Container root accesses the devices without host udev changes. All Linux capabilities are dropped, privilege escalation is disabled, the root filesystem is read-only and networking is disabled. The mapped bus also exposes other USB devices; stop the container when done. Actual access and hotplug behavior still require hardware verification.
 
+
+The container uses `config/fastdds.xml` with a 64 MiB shared-memory segment and a 16 MiB message limit to avoid dropping large images with the small default buffer. `live.sh start` supplies it through `FASTRTPS_DEFAULT_PROFILES_FILE`, verified in the current image. After changing it, run `./scripts/live.sh stop` followed by `./scripts/live.sh start` to recreate the container. No host `/dev/shm`, USB buffer or driver changes are required.
+
+Compare SDK logs, image topics and algorithm outputs when diagnosing frame rates; a configured 30 Hz profile alone is insufficient. Decoded `1280×720 rgb8` color is about 2.64 MiB per frame; `640×480 16UC1` depth is about 600 KiB. An observer can also add load. Record the sampling duration, subscriptions and whether mapping is running concurrently.
+
 ## 2. Select a mode
 
 ```bash
@@ -74,3 +79,13 @@ ros2 service call /nvblox_node/save_ply nvblox_msgs/srv/FilePath "{file_path: '$
 ```
 
 Files appear under the checkout's `runs/` directory. Check free disk space before recording. If USB access or a stream fails, keep the error log, stop competing camera programs and the container, and investigate the actual device/profile; the scripts do not silently change host permissions or firmware.
+
+## 5. Interpret the outputs
+
+- `/visual_slam/tracking/odometry`: camera pose relative to `odom`, suitable for plotting a trajectory. Robot-base or end-effector pose requires additional extrinsics and TF.
+- `/nvblox_node/mesh` and exported PLY: a triangle mesh of observed surfaces. Inspect local geometry, holes and ghosting in a PLY viewer. A test may also generate an offline HTML preview, linked from its local `runs/` report. Such previews use height coloring; this pipeline does not fuse camera color.
+- `/nvblox_node/static_map_slice`: an ESDF slice for obstacle-distance queries by a planner. This project does not integrate a complete Nav2 navigation stack, robot control or safety stopping.
+
+Initial uses include indoor robot visual localization, local obstacle reconstruction, handheld local scanning and ROS perception-pipeline experiments. A distance field does not automatically produce a feasible path, and a mesh is not a metrology-grade CAD model. With the projector disabled, depth depends on natural texture and lighting; nearby moving people, reflective surfaces and incomplete coverage can leave holes or ghosting. Integration is in `odom`; the map is not globally deformed after a VSLAM loop closure.
+
+Live RViz requires these topics and the corresponding plugins, plus a GUI connection. The current container does not forward the host display server. Export and view PLY first; no host driver changes are needed.
