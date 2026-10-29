@@ -22,10 +22,10 @@ Camera profiles are a starting configuration that requires device verification. 
 <table>
 <thead><tr><th scope="col">Component</th><th scope="col" width="10000">Responsibility</th></tr></thead>
 <tbody>
-<tr><td nowrap><code>scripts/prepare.py</code></td><td>Fetch pinned upstream inputs, verify checksums and preserve modified driver sources.</td></tr>
-<tr><td nowrap><code>docker/</code></td><td>Define core and Orbbec-enabled images; downloaded SDK binaries stay outside Git.</td></tr>
-<tr><td nowrap><code>scripts/live.sh</code></td><td>Manage one USB-enabled container and explicitly start a selected live mode.</td></tr>
-<tr><td nowrap>Validation scripts</td><td>Check GPU computation, dataset outputs and camera-disabled component startup; write local reports.</td></tr>
+<tr><td nowrap><a href="scripts/prepare.py">Input prep</a></td><td>Fetch pinned upstream inputs, verify checksums and preserve modified driver sources.</td></tr>
+<tr><td nowrap><a href="docker/">Images</a></td><td>Define core and Orbbec-enabled images; downloaded SDK binaries stay outside Git.</td></tr>
+<tr><td nowrap><a href="scripts/live.sh">Live container</a></td><td>Manage one USB-enabled container and explicitly start a selected live mode.</td></tr>
+<tr><td nowrap><a href="docs/DEVELOPMENT.md">Checks</a></td><td>Check GPU computation, dataset outputs and camera-disabled component startup; write local reports.</td></tr>
 </tbody>
 </table>
 

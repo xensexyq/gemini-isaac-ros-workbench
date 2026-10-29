@@ -22,10 +22,10 @@
 <table>
 <thead><tr><th scope="col">组件</th><th scope="col" width="10000">职责</th></tr></thead>
 <tbody>
-<tr><td nowrap><code>scripts/prepare.py</code></td><td>获取固定上游输入、校验文件，并保留已修改的驱动源码。</td></tr>
-<tr><td nowrap><code>docker/</code></td><td>定义核心镜像和相机镜像；下载的 SDK 二进制不进入 Git。</td></tr>
-<tr><td nowrap><code>scripts/live.sh</code></td><td>管理单个 USB 容器，显式启动所选实机模式。</td></tr>
-<tr><td nowrap>验证脚本</td><td>检查 GPU 计算、数据集输出及禁用相机的组件启动，将报告保存在本地。</td></tr>
+<tr><td nowrap><a href="scripts/prepare.py">依赖准备</a></td><td>获取固定上游输入、校验文件，并保留已修改的驱动源码。</td></tr>
+<tr><td nowrap><a href="docker/">镜像定义</a></td><td>定义核心镜像和相机镜像；下载的 SDK 二进制不进入 Git。</td></tr>
+<tr><td nowrap><a href="scripts/live.sh">实机容器</a></td><td>管理单个 USB 容器，显式启动所选实机模式。</td></tr>
+<tr><td nowrap><a href="docs/DEVELOPMENT-zh.md">验证入口</a></td><td>检查 GPU 计算、数据集输出及禁用相机的组件启动，将报告保存在本地。</td></tr>
 </tbody>
 </table>
 
