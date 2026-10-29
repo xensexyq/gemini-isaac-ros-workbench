@@ -33,7 +33,9 @@ enable_accel: true
 enable_gyro: true
 enable_sync_output_accel_gyro: true
 accel_rate: 200hz
+accel_range: 4g
 gyro_rate: 200hz
+gyro_range: 1000dps
 # 保留原始图像及其畸变参数，VSLAM 使用 rectified_images=false。
 enable_left_ir_undistortion: false
 enable_right_ir_undistortion: false
